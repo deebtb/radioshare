@@ -225,7 +225,7 @@
         let currentStation = null;
 
         function parseCSV(text) {
-            const lines = text.split('\n');
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
             const result = [];
             for (let i = 2; i < lines.length; i++) {
                 const line = lines[i].trim();
