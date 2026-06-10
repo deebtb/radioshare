@@ -4,8 +4,350 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Stations Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 2rem 1rem;
+            text-align: center;
+            border-bottom: 2px solid #e94560;
+        }
+
+        header h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        #search {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e94560;
+            border-radius: 8px;
+            background: #16213e;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #search::placeholder {
+            color: #888;
+        }
+
+        #search:focus {
+            border-color: #ff6b6b;
+        }
+
+        .station-count {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .station-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid #0f3460;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(233, 69, 96, 0.2);
+            border-color: #e94560;
+        }
+
+        .station-card.playing {
+            border-color: #e94560;
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .station-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .play-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            align-self: flex-start;
+        }
+
+        .play-btn:hover {
+            background: #ff6b6b;
+        }
+
+        .play-btn.active {
+            background: #ff6b6b;
+        }
+
+        .now-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0f3460;
+            border-top: 2px solid #e94560;
+            padding: 1rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .now-playing.visible {
+            display: flex;
+        }
+
+        .now-playing-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .stop-btn {
+            padding: 0.5rem 1rem;
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .stop-btn:hover {
+            background: #ff6b6b;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 600px) {
+            .stations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 1.5rem 1rem;
+            }
+
+            .now-playing {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Add padding at bottom so cards aren't hidden behind now-playing bar */
+        body.has-player main {
+            padding-bottom: 5rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Radio Stations Online</h1>
+    <header>
+        <h1>📻 Radio Stations Online</h1>
+        <div class="search-container">
+            <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
+        </div>
+        <p class="station-count" id="station-count"></p>
+    </header>
+
+    <main>
+        <div class="stations-grid" id="stations-grid"></div>
+        <div class="no-results" id="no-results" hidden>No stations found.</div>
+    </main>
+
+    <div class="now-playing" id="now-playing">
+        <span class="now-playing-name" id="now-playing-name"></span>
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+    </div>
+
+    <script>
+        const grid = document.getElementById('stations-grid');
+        const searchInput = document.getElementById('search');
+        const stationCount = document.getElementById('station-count');
+        const noResults = document.getElementById('no-results');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingName = document.getElementById('now-playing-name');
+        const stopBtn = document.getElementById('stop-btn');
+
+        let stations = [];
+        let audio = null;
+        let currentStation = null;
+
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const result = [];
+            for (let i = 2; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Handle quoted fields
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                fields.push(current.trim());
+
+                const name = fields[1];
+                const url = fields[2];
+
+                if (name && url && url.startsWith('http')) {
+                    result.push({ name, url });
+                }
+            }
+            return result;
+        }
+
+        function renderStations(filtered) {
+            grid.innerHTML = '';
+            if (filtered.length === 0) {
+                noResults.hidden = false;
+                stationCount.textContent = '0 stations';
+                return;
+            }
+            noResults.hidden = true;
+            stationCount.textContent = `${filtered.length} station${filtered.length !== 1 ? 's' : ''}`;
+
+            filtered.forEach(station => {
+                const card = document.createElement('div');
+                card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
+
+                const name = document.createElement('span');
+                name.className = 'station-name';
+                name.textContent = station.name;
+
+                const btn = document.createElement('button');
+                btn.className = 'play-btn' + (currentStation === station.url ? ' active' : '');
+                btn.textContent = currentStation === station.url ? '⏸ Playing' : '▶ Play';
+                btn.setAttribute('aria-label', `Play ${station.name}`);
+                btn.addEventListener('click', () => playStation(station));
+
+                card.appendChild(name);
+                card.appendChild(btn);
+                grid.appendChild(card);
+            });
+        }
+
+        function playStation(station) {
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+
+            if (currentStation === station.url) {
+                currentStation = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                renderStations(getFiltered());
+                return;
+            }
+
+            audio = new Audio(station.url);
+            audio.play().catch(() => {
+                alert('Unable to play this stream. It may be offline.');
+                currentStation = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                renderStations(getFiltered());
+            });
+
+            currentStation = station.url;
+            nowPlayingName.textContent = `🎵 ${station.name}`;
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            renderStations(getFiltered());
+        }
+
+        function getFiltered() {
+            const query = searchInput.value.toLowerCase();
+            return stations.filter(s => s.name.toLowerCase().includes(query));
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+            currentStation = null;
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            renderStations(getFiltered());
+        });
+
+        searchInput.addEventListener('input', () => {
+            renderStations(getFiltered());
+        });
+
+        // Load CSV
+        fetch('exclusive-radio.csv')
+            .then(res => res.text())
+            .then(text => {
+                stations = parseCSV(text);
+                renderStations(stations);
+            })
+            .catch(err => {
+                grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
+                console.error(err);
+            });
+    </script>
 </body>
 </html>
