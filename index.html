@@ -68,6 +68,22 @@
             padding: 2rem 1rem;
         }
 
+        .section-title {
+            font-size: 1.25rem;
+            color: #fff;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .favorites-section {
+            margin-bottom: 2rem;
+        }
+
+        .favorites-section.hidden {
+            display: none;
+        }
+
         .stations-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -83,6 +99,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            position: relative;
         }
 
         .station-card:hover {
@@ -100,6 +117,30 @@
             font-size: 1rem;
             font-weight: 600;
             color: #fff;
+            padding-right: 2rem;
+        }
+
+        .fav-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .fav-btn:hover {
+            opacity: 0.8;
+            transform: scale(1.2);
+        }
+
+        .fav-btn.favorited {
+            opacity: 1;
         }
 
         .play-btn {
@@ -186,7 +227,6 @@
             }
         }
 
-        /* Add padding at bottom so cards aren't hidden behind now-playing bar */
         body.has-player main {
             padding-bottom: 5rem;
         }
@@ -202,8 +242,16 @@
     </header>
 
     <main>
-        <div class="stations-grid" id="stations-grid"></div>
-        <div class="no-results" id="no-results" hidden>No stations found.</div>
+        <section class="favorites-section hidden" id="favorites-section">
+            <h2 class="section-title">⭐ Favorites</h2>
+            <div class="stations-grid" id="favorites-grid"></div>
+        </section>
+
+        <section>
+            <h2 class="section-title">All Stations</h2>
+            <div class="stations-grid" id="stations-grid"></div>
+            <div class="no-results" id="no-results" hidden>No stations found.</div>
+        </section>
     </main>
 
     <div class="now-playing" id="now-playing">
@@ -213,6 +261,8 @@
 
     <script>
         const grid = document.getElementById('stations-grid');
+        const favGrid = document.getElementById('favorites-grid');
+        const favSection = document.getElementById('favorites-section');
         const searchInput = document.getElementById('search');
         const stationCount = document.getElementById('station-count');
         const noResults = document.getElementById('no-results');
@@ -223,6 +273,25 @@
         let stations = [];
         let audio = null;
         let currentStation = null;
+        let favorites = JSON.parse(localStorage.getItem('radioFavorites') || '[]');
+
+        function saveFavorites() {
+            localStorage.setItem('radioFavorites', JSON.stringify(favorites));
+        }
+
+        function isFavorite(url) {
+            return favorites.includes(url);
+        }
+
+        function toggleFavorite(url) {
+            if (isFavorite(url)) {
+                favorites = favorites.filter(f => f !== url);
+            } else {
+                favorites.push(url);
+            }
+            saveFavorites();
+            render();
+        }
 
         function parseCSV(text) {
             const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
@@ -231,7 +300,6 @@
                 const line = lines[i].trim();
                 if (!line) continue;
 
-                // Handle quoted fields
                 const fields = [];
                 let current = '';
                 let inQuotes = false;
@@ -257,7 +325,56 @@
             return result;
         }
 
-        function renderStations(filtered) {
+        function createCard(station) {
+            const card = document.createElement('div');
+            card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
+
+            const favBtn = document.createElement('button');
+            favBtn.className = 'fav-btn' + (isFavorite(station.url) ? ' favorited' : '');
+            favBtn.textContent = isFavorite(station.url) ? '⭐' : '☆';
+            favBtn.setAttribute('aria-label', isFavorite(station.url) ? `Remove ${station.name} from favorites` : `Add ${station.name} to favorites`);
+            favBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(station.url);
+            });
+
+            const name = document.createElement('span');
+            name.className = 'station-name';
+            name.textContent = station.name;
+
+            const btn = document.createElement('button');
+            btn.className = 'play-btn' + (currentStation === station.url ? ' active' : '');
+            btn.textContent = currentStation === station.url ? '⏸ Playing' : '▶ Play';
+            btn.setAttribute('aria-label', `Play ${station.name}`);
+            btn.addEventListener('click', () => playStation(station));
+
+            card.appendChild(favBtn);
+            card.appendChild(name);
+            card.appendChild(btn);
+            return card;
+        }
+
+        function render() {
+            const filtered = getFiltered();
+
+            // Favorites section
+            const favStations = stations.filter(s => isFavorite(s.url));
+            const filteredFavs = favStations.filter(s => {
+                const query = searchInput.value.toLowerCase();
+                return s.name.toLowerCase().includes(query);
+            });
+
+            if (filteredFavs.length > 0) {
+                favSection.classList.remove('hidden');
+                favGrid.innerHTML = '';
+                filteredFavs.forEach(station => {
+                    favGrid.appendChild(createCard(station));
+                });
+            } else {
+                favSection.classList.add('hidden');
+            }
+
+            // All stations
             grid.innerHTML = '';
             if (filtered.length === 0) {
                 noResults.hidden = false;
@@ -268,22 +385,7 @@
             stationCount.textContent = `${filtered.length} station${filtered.length !== 1 ? 's' : ''}`;
 
             filtered.forEach(station => {
-                const card = document.createElement('div');
-                card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
-
-                const name = document.createElement('span');
-                name.className = 'station-name';
-                name.textContent = station.name;
-
-                const btn = document.createElement('button');
-                btn.className = 'play-btn' + (currentStation === station.url ? ' active' : '');
-                btn.textContent = currentStation === station.url ? '⏸ Playing' : '▶ Play';
-                btn.setAttribute('aria-label', `Play ${station.name}`);
-                btn.addEventListener('click', () => playStation(station));
-
-                card.appendChild(name);
-                card.appendChild(btn);
-                grid.appendChild(card);
+                grid.appendChild(createCard(station));
             });
         }
 
@@ -297,7 +399,7 @@
                 currentStation = null;
                 nowPlaying.classList.remove('visible');
                 document.body.classList.remove('has-player');
-                renderStations(getFiltered());
+                render();
                 return;
             }
 
@@ -307,14 +409,14 @@
                 currentStation = null;
                 nowPlaying.classList.remove('visible');
                 document.body.classList.remove('has-player');
-                renderStations(getFiltered());
+                render();
             });
 
             currentStation = station.url;
             nowPlayingName.textContent = `🎵 ${station.name}`;
             nowPlaying.classList.add('visible');
             document.body.classList.add('has-player');
-            renderStations(getFiltered());
+            render();
         }
 
         function getFiltered() {
@@ -330,11 +432,11 @@
             currentStation = null;
             nowPlaying.classList.remove('visible');
             document.body.classList.remove('has-player');
-            renderStations(getFiltered());
+            render();
         });
 
         searchInput.addEventListener('input', () => {
-            renderStations(getFiltered());
+            render();
         });
 
         // Load CSV
@@ -342,7 +444,7 @@
             .then(res => res.text())
             .then(text => {
                 stations = parseCSV(text);
-                renderStations(stations);
+                render();
             })
             .catch(err => {
                 grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
