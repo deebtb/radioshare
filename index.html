@@ -179,6 +179,7 @@
             align-items: center;
             justify-content: center;
             gap: 1rem;
+            flex-wrap: wrap;
             z-index: 100;
         }
 
@@ -186,9 +187,23 @@
             display: flex;
         }
 
-        .now-playing-name {
+        .now-playing-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .now-playing-station {
             font-weight: 600;
             color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .now-playing-track {
+            color: #ffd700;
+            font-size: 0.85rem;
+            font-style: italic;
         }
 
         .stop-btn {
@@ -228,7 +243,7 @@
         }
 
         body.has-player main {
-            padding-bottom: 5rem;
+            padding-bottom: 6rem;
         }
     </style>
 </head>
@@ -255,7 +270,10 @@
     </main>
 
     <div class="now-playing" id="now-playing">
-        <span class="now-playing-name" id="now-playing-name"></span>
+        <div class="now-playing-info">
+            <span class="now-playing-station" id="now-playing-station"></span>
+            <span class="now-playing-track" id="now-playing-track"></span>
+        </div>
         <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
     </div>
 
@@ -267,13 +285,16 @@
         const stationCount = document.getElementById('station-count');
         const noResults = document.getElementById('no-results');
         const nowPlaying = document.getElementById('now-playing');
-        const nowPlayingName = document.getElementById('now-playing-name');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingTrack = document.getElementById('now-playing-track');
         const stopBtn = document.getElementById('stop-btn');
 
         let stations = [];
         let audio = null;
         let currentStation = null;
+        let currentStationName = '';
         let favorites = JSON.parse(localStorage.getItem('radioFavorites') || '[]');
+        let metadataController = null;
 
         function saveFavorites() {
             localStorage.setItem('radioFavorites', JSON.stringify(favorites));
@@ -323,6 +344,108 @@
                 }
             }
             return result;
+        }
+
+        // ICY metadata reader
+        function startMetadataReader(url) {
+            if (metadataController) {
+                metadataController.abort();
+            }
+            metadataController = new AbortController();
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: metadataController.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) return;
+
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let waitingForLength = true;
+
+                function processChunk({ done, value }) {
+                    if (done) return;
+
+                    let offset = 0;
+                    while (offset < value.length) {
+                        if (metaBuffer !== null) {
+                            // Reading metadata content
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    nowPlayingTrack.textContent = match[1];
+                                }
+                                metaBuffer = null;
+                                waitingForLength = true;
+                                bytesUntilMeta = metaint;
+                            }
+                        } else if (!waitingForLength) {
+                            // shouldn't happen
+                            break;
+                        } else {
+                            // Reading audio data, counting down to metadata
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+
+                            if (bytesUntilMeta === 0) {
+                                // Next byte is metadata length
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) {
+                                        metaBuffer = [];
+                                        metaBytesRemaining = metaLength;
+                                        waitingForLength = false;
+                                    } else {
+                                        // No metadata this interval
+                                        bytesUntilMeta = metaint;
+                                    }
+                                } else {
+                                    // Length byte will be in next chunk
+                                    waitingForLength = false;
+                                    metaBuffer = null;
+                                    metaBytesRemaining = -1; // signal to read length first
+                                }
+                            }
+                        }
+                    }
+
+                    reader.read().then(processChunk).catch(() => {});
+                }
+
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {
+                // Silently fail - metadata is non-essential
+            });
+        }
+
+        function concatUint8Arrays(arrays) {
+            const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const arr of arrays) {
+                result.set(arr, offset);
+                offset += arr.length;
+            }
+            return result;
+        }
+
+        function stopMetadataReader() {
+            if (metadataController) {
+                metadataController.abort();
+                metadataController = null;
+            }
         }
 
         function createCard(station) {
@@ -394,26 +517,35 @@
                 audio.pause();
                 audio = null;
             }
+            stopMetadataReader();
 
             if (currentStation === station.url) {
                 currentStation = null;
+                currentStationName = '';
                 nowPlaying.classList.remove('visible');
                 document.body.classList.remove('has-player');
                 render();
                 return;
             }
 
+            // Use Audio element for playback (browser handles decoding)
             audio = new Audio(station.url);
             audio.play().catch(() => {
                 alert('Unable to play this stream. It may be offline.');
                 currentStation = null;
+                currentStationName = '';
                 nowPlaying.classList.remove('visible');
                 document.body.classList.remove('has-player');
                 render();
             });
 
+            // Start a separate fetch for metadata only
+            startMetadataReader(station.url);
+
             currentStation = station.url;
-            nowPlayingName.textContent = `🎵 ${station.name}`;
+            currentStationName = station.name;
+            nowPlayingStation.textContent = `🎵 ${station.name}`;
+            nowPlayingTrack.textContent = 'Loading track info...';
             nowPlaying.classList.add('visible');
             document.body.classList.add('has-player');
             render();
@@ -429,7 +561,9 @@
                 audio.pause();
                 audio = null;
             }
+            stopMetadataReader();
             currentStation = null;
+            currentStationName = '';
             nowPlaying.classList.remove('visible');
             document.body.classList.remove('has-player');
             render();
