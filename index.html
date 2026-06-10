@@ -192,18 +192,34 @@
             flex-direction: column;
             align-items: center;
             gap: 0.25rem;
+            max-width: 80%;
+            overflow: hidden;
         }
 
         .now-playing-station {
             font-weight: 600;
             color: #fff;
             font-size: 0.9rem;
+            white-space: nowrap;
         }
 
         .now-playing-track {
             color: #ffd700;
             font-size: 0.85rem;
             font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 100%;
+            text-align: center;
+        }
+
+        .now-playing-track.scrolling {
+            animation: marquee 12s linear infinite;
+        }
+
+        @keyframes marquee {
+            0%   { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
         }
 
         .stop-btn {
@@ -384,6 +400,7 @@
                                 const match = metaStr.match(/StreamTitle='([^']*)'/);
                                 if (match && match[1]) {
                                     nowPlayingTrack.textContent = match[1];
+                                    checkTrackOverflow();
                                 }
                                 metaBuffer = null;
                                 waitingForLength = true;
@@ -445,6 +462,15 @@
             if (metadataController) {
                 metadataController.abort();
                 metadataController = null;
+            }
+        }
+
+        function checkTrackOverflow() {
+            const el = nowPlayingTrack;
+            if (el.scrollWidth > el.clientWidth) {
+                el.classList.add('scrolling');
+            } else {
+                el.classList.remove('scrolling');
             }
         }
 
