@@ -34,10 +34,13 @@
         .search-container {
             max-width: 500px;
             margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
         }
 
         #search {
-            width: 100%;
+            flex: 1;
             padding: 0.75rem 1rem;
             border: 2px solid #e94560;
             border-radius: 8px;
@@ -53,6 +56,22 @@
         }
 
         #search:focus {
+            border-color: #ff6b6b;
+        }
+
+        .random-btn {
+            background: none;
+            border: 2px solid #e94560;
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            line-height: 1;
+        }
+
+        .random-btn:hover {
+            transform: scale(1.1) rotate(15deg);
             border-color: #ff6b6b;
         }
 
@@ -311,6 +330,7 @@
         <h1>📻 Radio Stations Online</h1>
         <div class="search-container">
             <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
+            <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
         </div>
         <p class="station-count" id="station-count"></p>
     </header>
@@ -682,6 +702,13 @@
 
         restoreBtn.addEventListener('click', () => {
             restoreAllHidden();
+        });
+
+        document.getElementById('random-btn').addEventListener('click', () => {
+            const visible = getFiltered();
+            if (visible.length === 0) return;
+            const randomStation = visible[Math.floor(Math.random() * visible.length)];
+            playStation(randomStation);
         });
 
         searchInput.addEventListener('input', () => {
