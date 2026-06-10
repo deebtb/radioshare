@@ -128,19 +128,19 @@
             border: none;
             font-size: 1.25rem;
             cursor: pointer;
-            opacity: 0.4;
-            transition: opacity 0.2s, transform 0.2s;
+            transition: transform 0.2s;
             padding: 0.25rem;
             line-height: 1;
+            color: #aaa;
         }
 
         .fav-btn:hover {
-            opacity: 0.8;
             transform: scale(1.2);
+            color: #ffd700;
         }
 
         .fav-btn.favorited {
-            opacity: 1;
+            color: #ffd700;
         }
 
         .play-btn {
@@ -331,7 +331,7 @@
 
             const favBtn = document.createElement('button');
             favBtn.className = 'fav-btn' + (isFavorite(station.url) ? ' favorited' : '');
-            favBtn.textContent = isFavorite(station.url) ? '⭐' : '☆';
+            favBtn.textContent = isFavorite(station.url) ? '★' : '☆';
             favBtn.setAttribute('aria-label', isFavorite(station.url) ? `Remove ${station.name} from favorites` : `Add ${station.name} to favorites`);
             favBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
