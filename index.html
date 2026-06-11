@@ -714,7 +714,7 @@
         });
 
         // Load CSV
-        fetch('exclusive-radio.csv')
+        fetch('streams/exclusive-radio.csv')
             .then(res => res.text())
             .then(text => {
                 stations = parseCSV(text);
