@@ -59,7 +59,7 @@
             border-color: #ff6b6b;
         }
 
-        .random-btn {
+        .random-btn, .share-btn {
             background: none;
             border: none;
             padding: 0.5rem;
@@ -69,8 +69,42 @@
             line-height: 1;
         }
 
+        .random-btn:hover, .share-btn:hover {
+            transform: scale(1.2);
+        }
+
         .random-btn:hover {
             transform: scale(1.2) rotate(15deg);
+        }
+
+        .share-btn.copied {
+            animation: pulse 0.5s ease;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .share-toast {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f3460;
+            border: 1px solid #e94560;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .share-toast.visible {
+            opacity: 1;
         }
 
         .station-count {
@@ -329,9 +363,12 @@
         <div class="search-container">
             <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
             <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
+            <button class="share-btn" id="share-btn" aria-label="Share preferences as URL" title="Share preferences link">🔗</button>
         </div>
         <p class="station-count" id="station-count"></p>
     </header>
+
+    <div class="share-toast" id="share-toast">Link copied to clipboard!</div>
 
     <main>
         <section class="favorites-section hidden" id="favorites-section">
@@ -366,6 +403,8 @@
         const nowPlayingStation = document.getElementById('now-playing-station');
         const nowPlayingTrack = document.getElementById('now-playing-track');
         const stopBtn = document.getElementById('stop-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const shareToast = document.getElementById('share-toast');
 
         let stations = [];
         let audio = null;
@@ -375,6 +414,113 @@
         let hiddenStations = JSON.parse(localStorage.getItem('radioHidden') || '[]');
         let metadataController = null;
         const restoreBtn = document.getElementById('restore-btn');
+
+        // --- Bitset URL encoding/decoding ---
+
+        function toBase64Url(bytes) {
+            let bin = '';
+            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+            let b64 = btoa(bin);
+            return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function fromBase64Url(s) {
+            s = s.replace(/-/g, '+').replace(/_/g, '/');
+            while (s.length % 4) s += '=';
+            let bin = atob(s);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+        }
+
+        function encodeBitset(total, indices) {
+            const bytes = new Uint8Array(Math.ceil(total / 8));
+            for (const i of indices) {
+                if (i >= 0 && i < total) {
+                    bytes[Math.floor(i / 8)] |= 1 << (i % 8);
+                }
+            }
+            return toBase64Url(bytes);
+        }
+
+        function decodeBitset(total, s) {
+            const bytes = fromBase64Url(s);
+            const res = [];
+            for (let i = 0; i < total; i++) {
+                if (i < bytes.length * 8 && (bytes[Math.floor(i / 8)] & (1 << (i % 8)))) {
+                    res.push(i);
+                }
+            }
+            return res;
+        }
+
+        function urlsToIndices(urls) {
+            return urls
+                .map(url => stations.findIndex(s => s.url === url))
+                .filter(i => i >= 0);
+        }
+
+        function indicesToUrls(indices) {
+            return indices
+                .filter(i => i >= 0 && i < stations.length)
+                .map(i => stations[i].url);
+        }
+
+        function generateShareUrl() {
+            const favIndices = urlsToIndices(favorites);
+            const hidIndices = urlsToIndices(hiddenStations);
+            const total = stations.length;
+
+            let hash = '';
+            if (favIndices.length > 0) {
+                hash += 'f=' + encodeBitset(total, favIndices);
+            }
+            if (hidIndices.length > 0) {
+                if (hash) hash += '&';
+                hash += 'h=' + encodeBitset(total, hidIndices);
+            }
+
+            const base = window.location.origin + window.location.pathname;
+            return hash ? base + '#' + hash : base;
+        }
+
+        function loadFromUrl() {
+            const hash = window.location.hash.slice(1);
+            if (!hash) return false;
+
+            const params = {};
+            hash.split('&').forEach(part => {
+                const [key, val] = part.split('=');
+                if (key && val) params[key] = val;
+            });
+
+            let loaded = false;
+            const total = stations.length;
+
+            if (params.f) {
+                const favIndices = decodeBitset(total, params.f);
+                favorites = indicesToUrls(favIndices);
+                saveFavorites();
+                loaded = true;
+            }
+
+            if (params.h) {
+                const hidIndices = decodeBitset(total, params.h);
+                hiddenStations = indicesToUrls(hidIndices);
+                saveHidden();
+                loaded = true;
+            }
+
+            return loaded;
+        }
+
+        function showToast(message) {
+            shareToast.textContent = message;
+            shareToast.classList.add('visible');
+            setTimeout(() => shareToast.classList.remove('visible'), 2500);
+        }
+
+        // --- End bitset ---
 
         function saveFavorites() {
             localStorage.setItem('radioFavorites', JSON.stringify(favorites));
@@ -474,7 +620,6 @@
                     let offset = 0;
                     while (offset < value.length) {
                         if (metaBuffer !== null) {
-                            // Reading metadata content
                             const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
                             metaBuffer.push(value.slice(offset, offset + bytesToRead));
                             metaBytesRemaining -= bytesToRead;
@@ -493,16 +638,13 @@
                                 bytesUntilMeta = metaint;
                             }
                         } else if (!waitingForLength) {
-                            // shouldn't happen
                             break;
                         } else {
-                            // Reading audio data, counting down to metadata
                             const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
                             bytesUntilMeta -= bytesToSkip;
                             offset += bytesToSkip;
 
                             if (bytesUntilMeta === 0) {
-                                // Next byte is metadata length
                                 if (offset < value.length) {
                                     const metaLength = value[offset] * 16;
                                     offset++;
@@ -511,14 +653,12 @@
                                         metaBytesRemaining = metaLength;
                                         waitingForLength = false;
                                     } else {
-                                        // No metadata this interval
                                         bytesUntilMeta = metaint;
                                     }
                                 } else {
-                                    // Length byte will be in next chunk
                                     waitingForLength = false;
                                     metaBuffer = null;
-                                    metaBytesRemaining = -1; // signal to read length first
+                                    metaBytesRemaining = -1;
                                 }
                             }
                         }
@@ -528,9 +668,7 @@
                 }
 
                 reader.read().then(processChunk).catch(() => {});
-            }).catch(() => {
-                // Silently fail - metadata is non-essential
-            });
+            }).catch(() => {});
         }
 
         function concatUint8Arrays(arrays) {
@@ -657,7 +795,6 @@
                 return;
             }
 
-            // Use Audio element for playback (browser handles decoding)
             audio = new Audio(station.url);
             audio.play().catch(() => {
                 alert('Unable to play this stream. It may be offline.');
@@ -668,7 +805,6 @@
                 render();
             });
 
-            // Start a separate fetch for metadata only
             startMetadataReader(station.url);
 
             currentStation = station.url;
@@ -709,15 +845,34 @@
             playStation(randomStation);
         });
 
+        shareBtn.addEventListener('click', () => {
+            const url = generateShareUrl();
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Link copied to clipboard!');
+                shareBtn.classList.add('copied');
+                setTimeout(() => shareBtn.classList.remove('copied'), 500);
+            }).catch(() => {
+                // Fallback: update the URL bar
+                window.history.replaceState(null, '', url);
+                showToast('URL updated — copy from address bar');
+            });
+        });
+
         searchInput.addEventListener('input', () => {
             render();
         });
 
-        // Load CSV
+        // Load CSV, then check URL for shared prefs
         fetch('streams/exclusive-radio.csv')
             .then(res => res.text())
             .then(text => {
                 stations = parseCSV(text);
+
+                // If URL has shared preferences, apply them (overrides localStorage)
+                if (window.location.hash.length > 1) {
+                    loadFromUrl();
+                }
+
                 render();
             })
             .catch(err => {
