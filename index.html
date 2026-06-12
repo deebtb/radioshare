@@ -747,8 +747,10 @@
                                 const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
                                 const match = metaStr.match(/StreamTitle='([^']*)'/);
                                 if (match && match[1]) {
-                                    favTrackInfo[url] = match[1];
-                                    updateFavTrackDisplay(url, match[1]);
+                                    const title = match[1];
+                                    const song = title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title;
+                                    favTrackInfo[url] = song;
+                                    updateFavTrackDisplay(url, song);
                                 }
                                 found = true;
                                 controller.abort();
