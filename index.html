@@ -127,6 +127,35 @@
             border-bottom: 1px solid #0f3460;
         }
 
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .section-header .section-title {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .refresh-meta-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+            padding: 0.25rem;
+        }
+
+        .refresh-meta-btn:hover {
+            transform: scale(1.2);
+        }
+
         .favorites-section {
             margin-bottom: 2rem;
         }
@@ -382,7 +411,10 @@
 
     <main>
         <section class="favorites-section hidden" id="favorites-section">
-            <h2 class="section-title">⭐ Favorites</h2>
+            <div class="section-header">
+                <h2 class="section-title">⭐ Favorites</h2>
+                <button class="refresh-meta-btn" id="refresh-meta-btn" aria-label="Refresh now playing on favorites" title="Refresh now playing">🎹</button>
+            </div>
             <div class="stations-grid" id="favorites-grid"></div>
         </section>
 
@@ -969,6 +1001,10 @@
             if (visible.length === 0) return;
             const randomStation = visible[Math.floor(Math.random() * visible.length)];
             playStation(randomStation);
+        });
+
+        document.getElementById('refresh-meta-btn').addEventListener('click', () => {
+            refreshFavoritesMetadata();
         });
 
         shareBtn.addEventListener('click', () => {
