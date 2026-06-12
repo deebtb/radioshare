@@ -171,6 +171,16 @@
             padding-right: 2rem;
         }
 
+        .station-track {
+            font-size: 0.8rem;
+            color: #ffd700;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 1.1em;
+        }
+
         .fav-btn {
             position: absolute;
             top: 0.75rem;
@@ -560,6 +570,7 @@
             }
             saveFavorites();
             render();
+            refreshFavoritesMetadata();
         }
 
         function parseCSV(text) {
@@ -698,7 +709,110 @@
             }
         }
 
-        function createCard(station) {
+        // --- Favorites metadata peek ---
+        let favTrackInfo = {}; // url -> track title
+        let peekControllers = [];
+
+        function peekStationMetadata(url) {
+            const controller = new AbortController();
+            peekControllers.push(controller);
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: controller.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) { controller.abort(); return; }
+
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let waitingForLength = true;
+                let found = false;
+
+                function processChunk({ done, value }) {
+                    if (done || found) return;
+
+                    let offset = 0;
+                    while (offset < value.length && !found) {
+                        if (metaBuffer !== null) {
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    favTrackInfo[url] = match[1];
+                                    updateFavTrackDisplay(url, match[1]);
+                                }
+                                found = true;
+                                controller.abort();
+                                return;
+                            }
+                        } else if (!waitingForLength) {
+                            break;
+                        } else {
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) {
+                                        metaBuffer = [];
+                                        metaBytesRemaining = metaLength;
+                                        waitingForLength = false;
+                                    } else {
+                                        bytesUntilMeta = metaint;
+                                    }
+                                } else {
+                                    waitingForLength = false;
+                                    metaBuffer = null;
+                                    metaBytesRemaining = -1;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!found) {
+                        reader.read().then(processChunk).catch(() => {});
+                    }
+                }
+
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function updateFavTrackDisplay(url, track) {
+            document.querySelectorAll(`[data-track-url="${CSS.escape(url)}"]`).forEach(el => {
+                el.textContent = track;
+            });
+        }
+
+        function refreshFavoritesMetadata() {
+            // Abort any existing peeks
+            peekControllers.forEach(c => c.abort());
+            peekControllers = [];
+            favTrackInfo = {};
+
+            const favStations = stations.filter(s => isFavorite(s.url) && !isHidden(s.url));
+            const toPeek = favStations.slice(0, 10);
+
+            toPeek.forEach((station, i) => {
+                // Stagger requests by 200ms each
+                setTimeout(() => peekStationMetadata(station.url), i * 200);
+            });
+        }
+        // --- End favorites metadata peek ---
+
+        function createCard(station, showTrack) {
             const card = document.createElement('div');
             card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
 
@@ -724,15 +838,24 @@
             name.className = 'station-name';
             name.textContent = station.name;
 
+            card.appendChild(favBtn);
+            card.appendChild(hideBtn);
+            card.appendChild(name);
+
+            if (showTrack) {
+                const track = document.createElement('span');
+                track.className = 'station-track';
+                track.setAttribute('data-track-url', station.url);
+                track.textContent = favTrackInfo[station.url] || '';
+                card.appendChild(track);
+            }
+
             const btn = document.createElement('button');
             btn.className = 'play-btn' + (currentStation === station.url ? ' active' : '');
             btn.textContent = currentStation === station.url ? '⏸ Playing' : '▶ Play';
             btn.setAttribute('aria-label', `Play ${station.name}`);
             btn.addEventListener('click', () => playStation(station));
 
-            card.appendChild(favBtn);
-            card.appendChild(hideBtn);
-            card.appendChild(name);
             card.appendChild(btn);
             return card;
         }
@@ -751,7 +874,7 @@
                 favSection.classList.remove('hidden');
                 favGrid.innerHTML = '';
                 filteredFavs.forEach(station => {
-                    favGrid.appendChild(createCard(station));
+                    favGrid.appendChild(createCard(station, true));
                 });
             } else {
                 favSection.classList.add('hidden');
@@ -766,7 +889,7 @@
                 noResults.hidden = true;
                 stationCount.textContent = `${filtered.length} station${filtered.length !== 1 ? 's' : ''}`;
                 filtered.forEach(station => {
-                    grid.appendChild(createCard(station));
+                    grid.appendChild(createCard(station, false));
                 });
             }
 
@@ -874,6 +997,7 @@
                 }
 
                 render();
+                refreshFavoritesMetadata();
             })
             .catch(err => {
                 grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
