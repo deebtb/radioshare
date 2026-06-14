@@ -310,21 +310,12 @@
             padding: 1rem 2rem;
             display: none;
             align-items: center;
-            justify-content: space-between;
             gap: 1rem;
             z-index: 100;
         }
 
         .now-playing.visible {
             display: flex;
-        }
-
-        .now-playing-info {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            flex: 1;
-            min-width: 0;
         }
 
         .now-playing-station {
@@ -343,8 +334,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-align: right;
-            flex: 1;
         }
 
         .now-playing-track.scrolling {
@@ -388,20 +377,12 @@
             }
 
             .now-playing {
-                flex-direction: column;
-                gap: 0.5rem;
+                flex-wrap: wrap;
                 padding: 0.75rem 1rem;
-            }
-
-            .now-playing-info {
-                flex-direction: column;
-                align-items: center;
-                gap: 0.25rem;
             }
 
             .now-playing-track {
                 font-size: 1.1rem;
-                text-align: center;
             }
         }
 
@@ -441,11 +422,9 @@
     </main>
 
     <div class="now-playing" id="now-playing">
-        <div class="now-playing-info">
-            <span class="now-playing-station" id="now-playing-station"></span>
-            <span class="now-playing-track" id="now-playing-track"></span>
-        </div>
         <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-track" id="now-playing-track"></span>
     </div>
 
     <script>
