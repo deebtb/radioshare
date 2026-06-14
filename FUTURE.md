@@ -10,6 +10,11 @@ This is where ideas are dropped without much thought into things like breaking c
 ## Versioning
 Is semantic versioning useful to identify when a new feature will break. Does Github pages support versioning if someone wants the "old version" back.
 
+See VERSIONING.md for semantic versioning rules.
+
+## Changelog
+Publish a meaningful changelog file accessible through minor link in a footer
+
 ## Stream organization
 The project originally was a basic and very usable page of Exclusive Radio artist streams with supports for 
 - Favorites ⭐
