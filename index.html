@@ -648,14 +648,26 @@
                 let bytesUntilMeta = metaint;
                 let metaBuffer = null;
                 let metaBytesRemaining = 0;
-                let waitingForLength = true;
+                let needLengthByte = false;
 
                 function processChunk({ done, value }) {
                     if (done) return;
 
                     let offset = 0;
                     while (offset < value.length) {
-                        if (metaBuffer !== null) {
+                        if (needLengthByte) {
+                            // First byte of this chunk is the metadata length
+                            const metaLength = value[offset] * 16;
+                            offset++;
+                            needLengthByte = false;
+                            if (metaLength > 0) {
+                                metaBuffer = [];
+                                metaBytesRemaining = metaLength;
+                            } else {
+                                bytesUntilMeta = metaint;
+                            }
+                        } else if (metaBuffer !== null) {
+                            // Reading metadata content
                             const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
                             metaBuffer.push(value.slice(offset, offset + bytesToRead));
                             metaBytesRemaining -= bytesToRead;
@@ -671,12 +683,10 @@
                                     updateMediaSession(currentStationName, match[1]);
                                 }
                                 metaBuffer = null;
-                                waitingForLength = true;
                                 bytesUntilMeta = metaint;
                             }
-                        } else if (!waitingForLength) {
-                            break;
                         } else {
+                            // Reading audio data, counting down to metadata
                             const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
                             bytesUntilMeta -= bytesToSkip;
                             offset += bytesToSkip;
@@ -688,14 +698,12 @@
                                     if (metaLength > 0) {
                                         metaBuffer = [];
                                         metaBytesRemaining = metaLength;
-                                        waitingForLength = false;
                                     } else {
                                         bytesUntilMeta = metaint;
                                     }
                                 } else {
-                                    waitingForLength = false;
-                                    metaBuffer = null;
-                                    metaBytesRemaining = -1;
+                                    // Length byte will be first byte of next chunk
+                                    needLengthByte = true;
                                 }
                             }
                         }
