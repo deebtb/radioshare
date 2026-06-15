@@ -20,23 +20,27 @@
 
         header {
             background: #2b6cb0;
-            padding: 2rem 1rem;
-            text-align: center;
+            padding: 0.75rem 1.5rem;
             border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
 
         header h1 {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
             color: #fff;
-            margin-bottom: 1rem;
+            white-space: nowrap;
         }
 
         .search-container {
-            max-width: 500px;
-            margin: 0 auto;
             display: flex;
             gap: 0.5rem;
             align-items: center;
+            flex: 1;
+            max-width: 450px;
         }
 
         #search {
@@ -70,12 +74,20 @@
             line-height: 1;
         }
 
+        .random-btn {
+            font-size: 2rem;
+            background: #fbd38d;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+        }
+
         .random-btn:hover, .share-btn:hover {
             transform: scale(1.2);
         }
 
         .random-btn:hover {
             transform: scale(1.2) rotate(15deg);
+            background: #f6e05e;
         }
 
         .share-btn.copied {
@@ -109,9 +121,9 @@
         }
 
         .station-count {
-            margin-top: 0.75rem;
-            font-size: 0.9rem;
-            color: #e2e8f0;
+            font-size: 0.8rem;
+            color: #bee3f8;
+            white-space: nowrap;
         }
 
         main {
@@ -320,6 +332,27 @@
             display: flex;
         }
 
+        .now-playing-fav {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+            margin-left: auto;
+            flex-shrink: 0;
+            color: #a0aec0;
+        }
+
+        .now-playing-fav:hover {
+            transform: scale(1.2);
+            color: #d69e2e;
+        }
+
+        .now-playing-fav.favorited {
+            color: #d69e2e;
+        }
+
         .now-playing-station {
             font-weight: 600;
             color: #e2e8f0;
@@ -376,7 +409,18 @@
             }
 
             header {
-                padding: 1.5rem 1rem;
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            header h1 {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .search-container {
+                max-width: 100%;
             }
 
             .now-playing {
@@ -402,7 +446,7 @@
             <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
             <button class="share-btn" id="share-btn" aria-label="Share preferences as URL" title="Share preferences link">🔗</button>
         </div>
-        <p class="station-count" id="station-count"></p>
+        <span class="station-count" id="station-count"></span>
     </header>
 
     <div class="share-toast" id="share-toast">Link copied to clipboard!</div>
@@ -428,6 +472,7 @@
         <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
         <span class="now-playing-station" id="now-playing-station"></span>
         <span class="now-playing-track" id="now-playing-track"></span>
+        <button class="now-playing-fav" id="now-playing-fav" aria-label="Favorite current station" title="Favorite this station">☆</button>
     </div>
 
     <script>
@@ -443,6 +488,7 @@
         const stopBtn = document.getElementById('stop-btn');
         const shareBtn = document.getElementById('share-btn');
         const shareToast = document.getElementById('share-toast');
+        const nowPlayingFav = document.getElementById('now-playing-fav');
 
         let stations = [];
         let audio = null;
@@ -599,6 +645,13 @@
             saveFavorites();
             render();
             refreshFavoritesMetadata();
+        }
+
+        function updateNowPlayingFav() {
+            if (!currentStation) return;
+            const fav = isFavorite(currentStation);
+            nowPlayingFav.textContent = fav ? '★' : '☆';
+            nowPlayingFav.classList.toggle('favorited', fav);
         }
 
         function parseCSV(text) {
@@ -1028,6 +1081,7 @@
             currentStationName = station.name;
             nowPlayingStation.textContent = `🎵 ${station.name}`;
             nowPlayingTrack.textContent = 'Loading track info...';
+            updateNowPlayingFav();
             nowPlaying.classList.add('visible');
             document.body.classList.add('has-player');
             updateMediaSession(station.name, '');
@@ -1079,6 +1133,12 @@
                 window.history.replaceState(null, '', url);
                 showToast('URL updated — copy from address bar');
             });
+        });
+
+        nowPlayingFav.addEventListener('click', () => {
+            if (!currentStation) return;
+            toggleFavorite(currentStation);
+            updateNowPlayingFav();
         });
 
         searchInput.addEventListener('input', () => {
