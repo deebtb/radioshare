@@ -13,16 +13,16 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
+            background: #f0f4f8;
+            color: #2d3748;
             min-height: 100vh;
         }
 
         header {
-            background: linear-gradient(135deg, #16213e, #0f3460);
+            background: #2b6cb0;
             padding: 2rem 1rem;
             text-align: center;
-            border-bottom: 2px solid #e94560;
+            border-bottom: 3px solid #2c5282;
         }
 
         header h1 {
@@ -42,21 +42,22 @@
         #search {
             flex: 1;
             padding: 0.75rem 1rem;
-            border: 2px solid #e94560;
+            border: 2px solid #bee3f8;
             border-radius: 8px;
-            background: #16213e;
-            color: #fff;
+            background: #fff;
+            color: #2d3748;
             font-size: 1rem;
             outline: none;
             transition: border-color 0.3s;
         }
 
         #search::placeholder {
-            color: #888;
+            color: #a0aec0;
         }
 
         #search:focus {
-            border-color: #ff6b6b;
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.3);
         }
 
         .random-btn, .share-btn {
@@ -91,8 +92,8 @@
             top: 1rem;
             left: 50%;
             transform: translateX(-50%);
-            background: #0f3460;
-            border: 1px solid #e94560;
+            background: #2b6cb0;
+            border: 1px solid #2c5282;
             color: #fff;
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
@@ -110,7 +111,7 @@
         .station-count {
             margin-top: 0.75rem;
             font-size: 0.9rem;
-            color: #aaa;
+            color: #e2e8f0;
         }
 
         main {
@@ -121,10 +122,10 @@
 
         .section-title {
             font-size: 1.25rem;
-            color: #fff;
+            color: #2d3748;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid #0f3460;
+            border-bottom: 2px solid #e2e8f0;
         }
 
         .section-header {
@@ -133,7 +134,7 @@
             justify-content: space-between;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid #0f3460;
+            border-bottom: 2px solid #e2e8f0;
         }
 
         .section-header .section-title {
@@ -171,38 +172,39 @@
         }
 
         .station-card {
-            background: #16213e;
+            background: #fff;
             border-radius: 12px;
             padding: 1.25rem;
-            border: 1px solid #0f3460;
+            border: 1px solid #e2e8f0;
             transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
             position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .station-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(233, 69, 96, 0.2);
-            border-color: #e94560;
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.15);
+            border-color: #63b3ed;
         }
 
         .station-card.playing {
-            border-color: #e94560;
-            box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+            border-color: #2b6cb0;
+            box-shadow: 0 0 12px rgba(43, 108, 176, 0.25);
         }
 
         .station-name {
             font-size: 1rem;
             font-weight: 600;
-            color: #fff;
+            color: #1a202c;
             padding-right: 2rem;
         }
 
         .station-track {
             font-size: 0.8rem;
-            color: #ffd700;
+            color: #2b6cb0;
             font-style: italic;
             white-space: nowrap;
             overflow: hidden;
@@ -221,16 +223,16 @@
             transition: transform 0.2s;
             padding: 0.25rem;
             line-height: 1;
-            color: #aaa;
+            color: #a0aec0;
         }
 
         .fav-btn:hover {
             transform: scale(1.2);
-            color: #ffd700;
+            color: #d69e2e;
         }
 
         .fav-btn.favorited {
-            color: #ffd700;
+            color: #d69e2e;
         }
 
         .play-btn {
@@ -238,7 +240,7 @@
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem 1rem;
-            background: #e94560;
+            background: #2b6cb0;
             color: #fff;
             border: none;
             border-radius: 6px;
@@ -250,11 +252,11 @@
         }
 
         .play-btn:hover {
-            background: #ff6b6b;
+            background: #2c5282;
         }
 
         .play-btn.active {
-            background: #ff6b6b;
+            background: #276749;
         }
 
         .hide-btn {
@@ -268,12 +270,12 @@
             transition: transform 0.2s;
             padding: 0.25rem;
             line-height: 1;
-            opacity: 0.4;
+            opacity: 0.35;
         }
 
         .hide-btn:hover {
             transform: scale(1.2);
-            opacity: 1;
+            opacity: 0.9;
         }
 
         .restore-btn {
@@ -283,8 +285,8 @@
             margin-top: 1.5rem;
             padding: 0.5rem 1rem;
             background: none;
-            color: #888;
-            border: 1px solid #0f3460;
+            color: #718096;
+            border: 1px solid #e2e8f0;
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
@@ -292,8 +294,8 @@
         }
 
         .restore-btn:hover {
-            color: #e0e0e0;
-            border-color: #e94560;
+            color: #2d3748;
+            border-color: #2b6cb0;
         }
 
         .restore-btn.hidden {
@@ -305,8 +307,8 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: #0f3460;
-            border-top: 2px solid #e94560;
+            background: #1a365d;
+            border-top: 3px solid #2b6cb0;
             padding: 1rem 2rem;
             display: none;
             align-items: center;
@@ -320,14 +322,14 @@
 
         .now-playing-station {
             font-weight: 600;
-            color: #fff;
+            color: #e2e8f0;
             font-size: 1rem;
             white-space: nowrap;
             flex-shrink: 0;
         }
 
         .now-playing-track {
-            color: #ffd700;
+            color: #fbd38d;
             font-size: 1.4rem;
             font-weight: 600;
             font-style: italic;
@@ -348,22 +350,23 @@
 
         .stop-btn {
             padding: 0.5rem 1rem;
-            background: #e94560;
+            background: #c53030;
             color: #fff;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.875rem;
+            font-weight: 500;
         }
 
         .stop-btn:hover {
-            background: #ff6b6b;
+            background: #9b2c2c;
         }
 
         .no-results {
             text-align: center;
             padding: 3rem 1rem;
-            color: #888;
+            color: #718096;
             font-size: 1.1rem;
         }
 
