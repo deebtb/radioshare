@@ -1120,10 +1120,6 @@
             playStation(randomStation);
         });
 
-        document.getElementById('refresh-meta-btn').addEventListener('click', () => {
-            refreshFavoritesMetadata();
-        });
-
         shareBtn.addEventListener('click', () => {
             const url = generateShareUrl();
             navigator.clipboard.writeText(url).then(() => {
