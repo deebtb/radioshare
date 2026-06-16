@@ -460,7 +460,6 @@
         <section class="favorites-section hidden" id="favorites-section">
             <div class="section-header">
                 <h2 class="section-title">⭐ Favorites</h2>
-                <button class="refresh-meta-btn" id="refresh-meta-btn" aria-label="Refresh now playing on favorites" title="Refresh now playing">🎹</button>
             </div>
             <div class="stations-grid" id="favorites-grid"></div>
         </section>
@@ -649,7 +648,6 @@
             }
             saveFavorites();
             render();
-            refreshFavoritesMetadata();
         }
 
         function updateNowPlayingFav() {
@@ -1026,7 +1024,7 @@
                 favSection.classList.remove('hidden');
                 favGrid.innerHTML = '';
                 filteredFavs.forEach(station => {
-                    favGrid.appendChild(createCard(station, true));
+                    favGrid.appendChild(createCard(station, false));
                 });
             } else {
                 favSection.classList.add('hidden');
@@ -1085,13 +1083,12 @@
             currentStation = station.url;
             currentStationName = station.name;
             nowPlayingStation.textContent = `🎵 ${station.name}`;
-            nowPlayingTrack.textContent = 'Loading track info...';
+            nowPlayingTrack.textContent = '';
             updateNowPlayingFav();
             nowPlaying.classList.add('visible');
             document.body.classList.add('has-player');
             updateMediaSession(station.name, '');
             render();
-            refreshFavoritesMetadata();
         }
 
         function getFiltered() {
@@ -1162,7 +1159,6 @@
                 }
 
                 render();
-                refreshFavoritesMetadata();
             })
             .catch(err => {
                 grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
