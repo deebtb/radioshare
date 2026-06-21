@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Stations Online</title>
+    <title>Other Stations</title>
     <style>
         * {
             margin: 0;
@@ -440,7 +440,7 @@
 </head>
 <body>
     <header>
-        <h1>📻 Radio Stations Online</h1>
+        <h1>🌐 Other Stations</h1>
         <div class="search-container">
             <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
             <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
@@ -454,9 +454,9 @@
     <main>
         <nav style="margin-bottom: 1.5rem; font-size: 0.9rem;">
             <strong style="color: #2b6cb0;">Stations:</strong>
-            <span style="color: #718096; margin-left: 0.5rem;">Exclusive Radio</span>
+            <a href="index.html" style="margin-left: 0.5rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Radio</a>
             <a href="bob.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Radio BOB</a>
-            <a href="other.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Other Stations</a>
+            <span style="margin-left: 1rem; color: #718096;">Other Stations</span>
         </nav>
         <section class="favorites-section hidden" id="favorites-section">
             <div class="section-header">
@@ -500,8 +500,8 @@
         let audio = null;
         let currentStation = null;
         let currentStationName = '';
-        let favorites = JSON.parse(localStorage.getItem('radioFavorites') || '[]');
-        let hiddenStations = JSON.parse(localStorage.getItem('radioHidden') || '[]');
+        let favorites = JSON.parse(localStorage.getItem('otherFavorites') || '[]');
+        let hiddenStations = JSON.parse(localStorage.getItem('otherHidden') || '[]');
         let metadataController = null;
         const restoreBtn = document.getElementById('restore-btn');
 
@@ -613,11 +613,11 @@
         // --- End bitset ---
 
         function saveFavorites() {
-            localStorage.setItem('radioFavorites', JSON.stringify(favorites));
+            localStorage.setItem('otherFavorites', JSON.stringify(favorites));
         }
 
         function saveHidden() {
-            localStorage.setItem('radioHidden', JSON.stringify(hiddenStations));
+            localStorage.setItem('otherHidden', JSON.stringify(hiddenStations));
         }
 
         function isHidden(url) {
@@ -822,9 +822,9 @@
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: title,
                 artist: artist,
-                album: 'Radio Stations Online',
+                album: 'Other Stations',
                 artwork: [
-                    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">📻</text></svg>', sizes: '100x100', type: 'image/svg+xml' }
+                    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🌐</text></svg>', sizes: '100x100', type: 'image/svg+xml' }
                 ]
             });
 
@@ -1152,7 +1152,7 @@
         });
 
         // Load CSV, then check URL for shared prefs
-        fetch('streams/exclusive-radio.csv')
+        fetch('streams/direct.csv')
             .then(res => res.text())
             .then(text => {
                 stations = parseCSV(text);
