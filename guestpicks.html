@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Other Stations</title>
+    <title>Exclusive Guest Picks</title>
     <style>
         * {
             margin: 0;
@@ -64,60 +64,20 @@
             box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.3);
         }
 
-        .random-btn, .share-btn {
-            background: none;
-            border: none;
-            padding: 0.5rem;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: transform 0.2s;
-            line-height: 1;
-        }
-
         .random-btn {
             font-size: 2rem;
             background: #fbd38d;
             border-radius: 8px;
             padding: 0.4rem 0.6rem;
-        }
-
-        .random-btn:hover, .share-btn:hover {
-            transform: scale(1.2);
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
         }
 
         .random-btn:hover {
             transform: scale(1.2) rotate(15deg);
             background: #f6e05e;
-        }
-
-        .share-btn.copied {
-            animation: pulse 0.5s ease;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-        }
-
-        .share-toast {
-            position: fixed;
-            top: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2b6cb0;
-            border: 1px solid #2c5282;
-            color: #fff;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            z-index: 200;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-
-        .share-toast.visible {
-            opacity: 1;
         }
 
         .station-count {
@@ -169,12 +129,35 @@
             transform: scale(1.2);
         }
 
-        .favorites-section {
+        .guest-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
             margin-bottom: 2rem;
         }
 
-        .favorites-section.hidden {
-            display: none;
+        .guest-btn {
+            padding: 0.6rem 1.2rem;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #2d3748;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .guest-btn:hover {
+            border-color: #63b3ed;
+            background: #ebf8ff;
+        }
+
+        .guest-btn.active {
+            background: #2b6cb0;
+            color: #fff;
+            border-color: #2b6cb0;
         }
 
         .stations-grid {
@@ -235,16 +218,11 @@
             transition: transform 0.2s;
             padding: 0.25rem;
             line-height: 1;
-            color: #a0aec0;
+            color: #d69e2e;
         }
 
         .fav-btn:hover {
             transform: scale(1.2);
-            color: #d69e2e;
-        }
-
-        .fav-btn.favorited {
-            color: #d69e2e;
         }
 
         .play-btn {
@@ -271,49 +249,6 @@
             background: #276749;
         }
 
-        .hide-btn {
-            position: absolute;
-            bottom: 0.75rem;
-            right: 0.75rem;
-            background: none;
-            border: none;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: transform 0.2s;
-            padding: 0.25rem;
-            line-height: 1;
-            opacity: 0.35;
-        }
-
-        .hide-btn:hover {
-            transform: scale(1.2);
-            opacity: 0.9;
-        }
-
-        .restore-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-            padding: 0.5rem 1rem;
-            background: none;
-            color: #718096;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: color 0.2s, border-color 0.2s;
-        }
-
-        .restore-btn:hover {
-            color: #2d3748;
-            border-color: #2b6cb0;
-        }
-
-        .restore-btn.hidden {
-            display: none;
-        }
-
         .now-playing {
             position: fixed;
             bottom: 0;
@@ -330,27 +265,6 @@
 
         .now-playing.visible {
             display: flex;
-        }
-
-        .now-playing-fav {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: transform 0.2s;
-            line-height: 1;
-            margin-left: auto;
-            flex-shrink: 0;
-            color: #a0aec0;
-        }
-
-        .now-playing-fav:hover {
-            transform: scale(1.2);
-            color: #d69e2e;
-        }
-
-        .now-playing-fav.favorited {
-            color: #d69e2e;
         }
 
         .now-playing-station {
@@ -440,39 +354,33 @@
 </head>
 <body>
     <header>
-        <h1>🌐 Other Stations</h1>
+        <h1>🎧 Exclusive Guest Picks</h1>
         <div class="search-container">
             <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
             <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
-            <button class="share-btn" id="share-btn" aria-label="Share preferences as URL" title="Share preferences link">🔗</button>
         </div>
         <span class="station-count" id="station-count"></span>
     </header>
-
-    <div class="share-toast" id="share-toast">Link copied to clipboard!</div>
 
     <main>
         <nav style="margin-bottom: 1.5rem; font-size: 0.9rem;">
             <strong style="color: #2b6cb0;">Stations:</strong>
             <a href="index.html" style="margin-left: 0.5rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Radio</a>
-            <a href="guestpicks.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <span style="margin-left: 1rem; color: #718096;">Exclusive Guest Picks</span>
             <a href="bob.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Radio BOB</a>
-            <span style="margin-left: 1rem; color: #718096;">Other Stations</span>
+            <a href="other.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Other Stations</a>
             <a href="presets.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Genre Presets</a>
         </nav>
-        <section class="favorites-section hidden" id="favorites-section">
-            <div class="section-header">
-                <h2 class="section-title">⭐ Favorites</h2>
-                <button class="refresh-meta-btn" id="refresh-meta-btn" aria-label="Refresh now playing on favorites" title="Refresh now playing">🎹</button>
-            </div>
-            <div class="stations-grid" id="favorites-grid"></div>
-        </section>
+
+        <div class="guest-picker" id="guest-picker"></div>
 
         <section>
-            <h2 class="section-title">All Stations</h2>
+            <div class="section-header">
+                <h2 class="section-title" id="section-title">Select a guest list above</h2>
+                <button class="refresh-meta-btn" id="refresh-meta-btn" aria-label="Refresh now playing" title="Refresh now playing" hidden>🎹</button>
+            </div>
             <div class="stations-grid" id="stations-grid"></div>
             <div class="no-results" id="no-results" hidden>No stations found.</div>
-            <button class="restore-btn hidden" id="restore-btn">Restore hidden channels</button>
         </section>
     </main>
 
@@ -480,13 +388,10 @@
         <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
         <span class="now-playing-station" id="now-playing-station"></span>
         <span class="now-playing-track" id="now-playing-track"></span>
-        <button class="now-playing-fav" id="now-playing-fav" aria-label="Favorite current station" title="Favorite this station">☆</button>
     </div>
 
     <script>
         const grid = document.getElementById('stations-grid');
-        const favGrid = document.getElementById('favorites-grid');
-        const favSection = document.getElementById('favorites-section');
         const searchInput = document.getElementById('search');
         const stationCount = document.getElementById('station-count');
         const noResults = document.getElementById('no-results');
@@ -494,28 +399,21 @@
         const nowPlayingStation = document.getElementById('now-playing-station');
         const nowPlayingTrack = document.getElementById('now-playing-track');
         const stopBtn = document.getElementById('stop-btn');
-        const shareBtn = document.getElementById('share-btn');
-        const shareToast = document.getElementById('share-toast');
-        const nowPlayingFav = document.getElementById('now-playing-fav');
+        const guestPicker = document.getElementById('guest-picker');
+        const sectionTitle = document.getElementById('section-title');
+        const refreshMetaBtn = document.getElementById('refresh-meta-btn');
 
         let stations = [];
+        let guestLists = []; // {label, favIndices, hidIndices}
+        let activeGuest = null;
         let audio = null;
         let currentStation = null;
         let currentStationName = '';
-        let favorites = JSON.parse(localStorage.getItem('otherFavorites') || '[]');
-        let hiddenStations = JSON.parse(localStorage.getItem('otherHidden') || '[]');
         let metadataController = null;
-        const restoreBtn = document.getElementById('restore-btn');
+        let favTrackInfo = {};
+        let peekControllers = [];
 
-        // --- Bitset URL encoding/decoding ---
-
-        function toBase64Url(bytes) {
-            let bin = '';
-            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-            let b64 = btoa(bin);
-            return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        }
-
+        // --- Bitset URL decoding ---
         function fromBase64Url(s) {
             s = s.replace(/-/g, '+').replace(/_/g, '/');
             while (s.length % 4) s += '=';
@@ -523,16 +421,6 @@
             const bytes = new Uint8Array(bin.length);
             for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
             return bytes;
-        }
-
-        function encodeBitset(total, indices) {
-            const bytes = new Uint8Array(Math.ceil(total / 8));
-            for (const i of indices) {
-                if (i >= 0 && i < total) {
-                    bytes[Math.floor(i / 8)] |= 1 << (i % 8);
-                }
-            }
-            return toBase64Url(bytes);
         }
 
         function decodeBitset(total, s) {
@@ -546,147 +434,39 @@
             return res;
         }
 
-        function urlsToIndices(urls) {
-            return urls
-                .map(url => stations.findIndex(s => s.url === url))
-                .filter(i => i >= 0);
-        }
-
-        function indicesToUrls(indices) {
-            return indices
-                .filter(i => i >= 0 && i < stations.length)
-                .map(i => stations[i].url);
-        }
-
-        function generateShareUrl() {
-            const favIndices = urlsToIndices(favorites);
-            const hidIndices = urlsToIndices(hiddenStations);
-            const total = stations.length;
-
-            let hash = '';
-            if (favIndices.length > 0) {
-                hash += 'f=' + encodeBitset(total, favIndices);
-            }
-            if (hidIndices.length > 0) {
-                if (hash) hash += '&';
-                hash += 'h=' + encodeBitset(total, hidIndices);
-            }
-
-            const base = window.location.origin + window.location.pathname;
-            return hash ? base + '#' + hash : base;
-        }
-
-        function loadFromUrl() {
-            const hash = window.location.hash.slice(1);
-            if (!hash) return false;
-
+        function parseBookmarkUrl(url) {
+            const hashIdx = url.indexOf('#');
+            if (hashIdx === -1) return { favIndices: [], hidIndices: [] };
+            const hash = url.slice(hashIdx + 1);
             const params = {};
             hash.split('&').forEach(part => {
                 const [key, val] = part.split('=');
                 if (key && val) params[key] = val;
             });
-
-            let loaded = false;
             const total = stations.length;
-
-            if (params.f) {
-                const favIndices = decodeBitset(total, params.f);
-                favorites = indicesToUrls(favIndices);
-                saveFavorites();
-                loaded = true;
-            }
-
-            if (params.h) {
-                const hidIndices = decodeBitset(total, params.h);
-                hiddenStations = indicesToUrls(hidIndices);
-                saveHidden();
-                loaded = true;
-            }
-
-            return loaded;
+            const favIndices = params.f ? decodeBitset(total, params.f) : [];
+            const hidIndices = params.h ? decodeBitset(total, params.h) : [];
+            return { favIndices, hidIndices };
         }
 
-        function showToast(message) {
-            shareToast.textContent = message;
-            shareToast.classList.add('visible');
-            setTimeout(() => shareToast.classList.remove('visible'), 2500);
-        }
-
-        // --- End bitset ---
-
-        function saveFavorites() {
-            localStorage.setItem('otherFavorites', JSON.stringify(favorites));
-        }
-
-        function saveHidden() {
-            localStorage.setItem('otherHidden', JSON.stringify(hiddenStations));
-        }
-
-        function isHidden(url) {
-            return hiddenStations.includes(url);
-        }
-
-        function hideStation(url) {
-            if (!isHidden(url)) {
-                hiddenStations.push(url);
-                saveHidden();
-            }
-            render();
-        }
-
-        function restoreAllHidden() {
-            hiddenStations = [];
-            saveHidden();
-            render();
-        }
-
-        function isFavorite(url) {
-            return favorites.includes(url);
-        }
-
-        function toggleFavorite(url) {
-            if (isFavorite(url)) {
-                favorites = favorites.filter(f => f !== url);
-            } else {
-                favorites.push(url);
-            }
-            saveFavorites();
-            render();
-            refreshFavoritesMetadata();
-        }
-
-        function updateNowPlayingFav() {
-            if (!currentStation) return;
-            const fav = isFavorite(currentStation);
-            nowPlayingFav.textContent = fav ? '★' : '☆';
-            nowPlayingFav.classList.toggle('favorited', fav);
-        }
-
-        function parseCSV(text) {
+        // --- CSV parsers ---
+        function parseStationsCSV(text) {
             const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
             const result = [];
             for (let i = 2; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-
                 const fields = [];
                 let current = '';
                 let inQuotes = false;
                 for (const char of line) {
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        fields.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
+                    if (char === '"') { inQuotes = !inQuotes; }
+                    else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else { current += char; }
                 }
                 fields.push(current.trim());
-
                 const name = fields[1];
                 const url = fields[2];
-
                 if (name && url && url.startsWith('http')) {
                     result.push({ name, url });
                 }
@@ -694,11 +474,33 @@
             return result;
         }
 
-        // ICY metadata reader
-        function startMetadataReader(url) {
-            if (metadataController) {
-                metadataController.abort();
+        function parseGuestCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') { inQuotes = !inQuotes; }
+                    else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else { current += char; }
+                }
+                fields.push(current.trim());
+                const label = fields[0];
+                const url = fields[1];
+                if (label && url) {
+                    result.push({ label, url });
+                }
             }
+            return result;
+        }
+
+        // --- ICY metadata reader ---
+        function startMetadataReader(url) {
+            if (metadataController) metadataController.abort();
             metadataController = new AbortController();
 
             fetch(url, {
@@ -707,7 +509,6 @@
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
                 if (!metaint) return;
-
                 const reader = response.body.getReader();
                 let bytesUntilMeta = metaint;
                 let metaBuffer = null;
@@ -716,27 +517,19 @@
 
                 function processChunk({ done, value }) {
                     if (done) return;
-
                     let offset = 0;
                     while (offset < value.length) {
                         if (needLengthByte) {
-                            // First byte of this chunk is the metadata length
                             const metaLength = value[offset] * 16;
                             offset++;
                             needLengthByte = false;
-                            if (metaLength > 0) {
-                                metaBuffer = [];
-                                metaBytesRemaining = metaLength;
-                            } else {
-                                bytesUntilMeta = metaint;
-                            }
+                            if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                            else { bytesUntilMeta = metaint; }
                         } else if (metaBuffer !== null) {
-                            // Reading metadata content
                             const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
                             metaBuffer.push(value.slice(offset, offset + bytesToRead));
                             metaBytesRemaining -= bytesToRead;
                             offset += bytesToRead;
-
                             if (metaBytesRemaining === 0) {
                                 const combined = concatUint8Arrays(metaBuffer);
                                 const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
@@ -750,32 +543,21 @@
                                 bytesUntilMeta = metaint;
                             }
                         } else {
-                            // Reading audio data, counting down to metadata
                             const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
                             bytesUntilMeta -= bytesToSkip;
                             offset += bytesToSkip;
-
                             if (bytesUntilMeta === 0) {
                                 if (offset < value.length) {
                                     const metaLength = value[offset] * 16;
                                     offset++;
-                                    if (metaLength > 0) {
-                                        metaBuffer = [];
-                                        metaBytesRemaining = metaLength;
-                                    } else {
-                                        bytesUntilMeta = metaint;
-                                    }
-                                } else {
-                                    // Length byte will be first byte of next chunk
-                                    needLengthByte = true;
-                                }
+                                    if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                                    else { bytesUntilMeta = metaint; }
+                                } else { needLengthByte = true; }
                             }
                         }
                     }
-
                     reader.read().then(processChunk).catch(() => {});
                 }
-
                 reader.read().then(processChunk).catch(() => {});
             }).catch(() => {});
         }
@@ -784,18 +566,12 @@
             const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
             const result = new Uint8Array(totalLength);
             let offset = 0;
-            for (const arr of arrays) {
-                result.set(arr, offset);
-                offset += arr.length;
-            }
+            for (const arr of arrays) { result.set(arr, offset); offset += arr.length; }
             return result;
         }
 
         function stopMetadataReader() {
-            if (metadataController) {
-                metadataController.abort();
-                metadataController = null;
-            }
+            if (metadataController) { metadataController.abort(); metadataController = null; }
         }
 
         function checkTrackOverflow() {
@@ -807,65 +583,23 @@
             }
         }
 
-        // --- Media Session API ---
         function updateMediaSession(stationName, trackTitle) {
             if (!('mediaSession' in navigator)) return;
-
             let title = trackTitle || stationName;
-            let artist = trackTitle ? stationName : 'Radio Stations Online';
-
-            // If track is "Artist - Song", split it
+            let artist = trackTitle ? stationName : 'Exclusive Guest Picks';
             if (trackTitle && trackTitle.includes(' - ')) {
                 const parts = trackTitle.split(' - ');
                 artist = parts[0];
                 title = parts.slice(1).join(' - ');
             }
-
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: title,
-                artist: artist,
-                album: 'Other Stations',
-                artwork: [
-                    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🌐</text></svg>', sizes: '100x100', type: 'image/svg+xml' }
-                ]
+                title, artist, album: 'Exclusive Guest Picks',
+                artwork: [{ src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🎧</text></svg>', sizes: '100x100', type: 'image/svg+xml' }]
             });
-
             navigator.mediaSession.playbackState = 'playing';
         }
 
-        function setupMediaSessionActions() {
-            if (!('mediaSession' in navigator)) return;
-
-            navigator.mediaSession.setActionHandler('stop', () => {
-                stopBtn.click();
-            });
-
-            navigator.mediaSession.setActionHandler('pause', () => {
-                if (audio) audio.pause();
-                navigator.mediaSession.playbackState = 'paused';
-            });
-
-            navigator.mediaSession.setActionHandler('play', () => {
-                if (audio) audio.play();
-                navigator.mediaSession.playbackState = 'playing';
-            });
-
-            navigator.mediaSession.setActionHandler('nexttrack', () => {
-                // Play random from visible stations
-                const visible = getFiltered();
-                if (visible.length === 0) return;
-                const randomStation = visible[Math.floor(Math.random() * visible.length)];
-                playStation(randomStation);
-            });
-        }
-
-        setupMediaSessionActions();
-        // --- End Media Session API ---
-
         // --- Favorites metadata peek ---
-        let favTrackInfo = {}; // url -> track title
-        let peekControllers = [];
-
         function peekStationMetadata(url) {
             const controller = new AbortController();
             peekControllers.push(controller);
@@ -876,17 +610,14 @@
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
                 if (!metaint) { controller.abort(); return; }
-
                 const reader = response.body.getReader();
                 let bytesUntilMeta = metaint;
                 let metaBuffer = null;
                 let metaBytesRemaining = 0;
-                let waitingForLength = true;
                 let found = false;
 
                 function processChunk({ done, value }) {
                     if (done || found) return;
-
                     let offset = 0;
                     while (offset < value.length && !found) {
                         if (metaBuffer !== null) {
@@ -894,7 +625,6 @@
                             metaBuffer.push(value.slice(offset, offset + bytesToRead));
                             metaBytesRemaining -= bytesToRead;
                             offset += bytesToRead;
-
                             if (metaBytesRemaining === 0) {
                                 const combined = concatUint8Arrays(metaBuffer);
                                 const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
@@ -903,107 +633,95 @@
                                     const title = match[1];
                                     const song = title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title;
                                     favTrackInfo[url] = song;
-                                    updateFavTrackDisplay(url, song);
+                                    updateTrackDisplay(url, song);
                                 }
                                 found = true;
                                 controller.abort();
                                 return;
                             }
-                        } else if (!waitingForLength) {
-                            break;
                         } else {
                             const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
                             bytesUntilMeta -= bytesToSkip;
                             offset += bytesToSkip;
-
                             if (bytesUntilMeta === 0) {
                                 if (offset < value.length) {
                                     const metaLength = value[offset] * 16;
                                     offset++;
-                                    if (metaLength > 0) {
-                                        metaBuffer = [];
-                                        metaBytesRemaining = metaLength;
-                                        waitingForLength = false;
-                                    } else {
-                                        bytesUntilMeta = metaint;
-                                    }
-                                } else {
-                                    waitingForLength = false;
-                                    metaBuffer = null;
-                                    metaBytesRemaining = -1;
+                                    if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                                    else { bytesUntilMeta = metaint; }
                                 }
                             }
                         }
                     }
-
-                    if (!found) {
-                        reader.read().then(processChunk).catch(() => {});
-                    }
+                    if (!found) reader.read().then(processChunk).catch(() => {});
                 }
-
                 reader.read().then(processChunk).catch(() => {});
             }).catch(() => {});
         }
 
-        function updateFavTrackDisplay(url, track) {
+        function updateTrackDisplay(url, track) {
             document.querySelectorAll(`[data-track-url="${CSS.escape(url)}"]`).forEach(el => {
                 el.textContent = track;
             });
         }
 
-        function refreshFavoritesMetadata() {
-            // Abort any existing peeks
+        function refreshMetadata() {
             peekControllers.forEach(c => c.abort());
             peekControllers = [];
             favTrackInfo = {};
-
-            const favStations = stations.filter(s => isFavorite(s.url) && !isHidden(s.url));
-            const toPeek = favStations.slice(0, 10);
-
+            const { favs, others } = getFilteredStations();
+            const visible = [...favs, ...others];
+            const toPeek = visible.slice(0, 10);
             toPeek.forEach((station, i) => {
-                // Stagger requests by 200ms each
                 setTimeout(() => peekStationMetadata(station.url), i * 200);
             });
         }
-        // --- End favorites metadata peek ---
 
-        function createCard(station, showTrack) {
+        // --- Core rendering ---
+        function getFilteredStations() {
+            if (activeGuest === null) return { favs: [], others: [] };
+            const guest = guestLists[activeGuest];
+            const query = searchInput.value.toLowerCase();
+            const hidSet = new Set(guest.hidIndices);
+            const favSet = new Set(guest.favIndices);
+
+            const favs = [];
+            const others = [];
+
+            for (let i = 0; i < stations.length; i++) {
+                if (hidSet.has(i)) continue;
+                const s = stations[i];
+                if (!s.name.toLowerCase().includes(query)) continue;
+                if (favSet.has(i)) {
+                    favs.push(s);
+                } else {
+                    others.push(s);
+                }
+            }
+            return { favs, others };
+        }
+
+        function createCard(station, isFav) {
             const card = document.createElement('div');
             card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
 
-            const favBtn = document.createElement('button');
-            favBtn.className = 'fav-btn' + (isFavorite(station.url) ? ' favorited' : '');
-            favBtn.textContent = isFavorite(station.url) ? '★' : '☆';
-            favBtn.setAttribute('aria-label', isFavorite(station.url) ? `Remove ${station.name} from favorites` : `Add ${station.name} to favorites`);
-            favBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleFavorite(station.url);
-            });
-
-            const hideBtn = document.createElement('button');
-            hideBtn.className = 'hide-btn';
-            hideBtn.textContent = '🚫';
-            hideBtn.setAttribute('aria-label', `Hide ${station.name}`);
-            hideBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                hideStation(station.url);
-            });
+            if (isFav) {
+                const favBtn = document.createElement('button');
+                favBtn.className = 'fav-btn';
+                favBtn.textContent = '★';
+                favBtn.setAttribute('aria-label', `${station.name} - bookmarked`);
+                favBtn.style.cursor = 'default';
+                card.appendChild(favBtn);
+            }
 
             const name = document.createElement('span');
             name.className = 'station-name';
             name.textContent = station.name;
 
-            card.appendChild(favBtn);
-            card.appendChild(hideBtn);
-            card.appendChild(name);
-
-            if (showTrack) {
-                const track = document.createElement('span');
-                track.className = 'station-track';
-                track.setAttribute('data-track-url', station.url);
-                track.textContent = favTrackInfo[station.url] || '';
-                card.appendChild(track);
-            }
+            const track = document.createElement('span');
+            track.className = 'station-track';
+            track.setAttribute('data-track-url', station.url);
+            track.textContent = favTrackInfo[station.url] || '';
 
             const btn = document.createElement('button');
             btn.className = 'play-btn' + (currentStation === station.url ? ' active' : '');
@@ -1011,57 +729,63 @@
             btn.setAttribute('aria-label', `Play ${station.name}`);
             btn.addEventListener('click', () => playStation(station));
 
+            card.appendChild(name);
+            card.appendChild(track);
             card.appendChild(btn);
             return card;
         }
 
         function render() {
-            const filtered = getFiltered();
+            grid.innerHTML = '';
 
-            // Favorites section (also exclude hidden)
-            const favStations = stations.filter(s => isFavorite(s.url) && !isHidden(s.url));
-            const filteredFavs = favStations.filter(s => {
-                const query = searchInput.value.toLowerCase();
-                return s.name.toLowerCase().includes(query);
-            });
-
-            if (filteredFavs.length > 0) {
-                favSection.classList.remove('hidden');
-                favGrid.innerHTML = '';
-                filteredFavs.forEach(station => {
-                    favGrid.appendChild(createCard(station, true));
-                });
-            } else {
-                favSection.classList.add('hidden');
+            if (activeGuest === null) {
+                noResults.hidden = true;
+                stationCount.textContent = '';
+                return;
             }
 
-            // All stations
-            grid.innerHTML = '';
-            if (filtered.length === 0) {
+            const { favs, others } = getFilteredStations();
+            const total = favs.length + others.length;
+
+            if (total === 0) {
                 noResults.hidden = false;
                 stationCount.textContent = '0 stations';
             } else {
                 noResults.hidden = true;
-                stationCount.textContent = `${filtered.length} station${filtered.length !== 1 ? 's' : ''}`;
-                filtered.forEach(station => {
+                stationCount.textContent = `${total} station${total !== 1 ? 's' : ''}`;
+                favs.forEach(station => {
+                    grid.appendChild(createCard(station, true));
+                });
+                others.forEach(station => {
                     grid.appendChild(createCard(station, false));
                 });
             }
+        }
 
-            // Restore button
-            if (hiddenStations.length > 0) {
-                restoreBtn.classList.remove('hidden');
-                restoreBtn.textContent = `Restore ${hiddenStations.length} hidden channel${hiddenStations.length !== 1 ? 's' : ''}`;
-            } else {
-                restoreBtn.classList.add('hidden');
-            }
+        function selectGuest(index) {
+            if (activeGuest === index) return;
+            activeGuest = index;
+            const guest = guestLists[index];
+            sectionTitle.textContent = `🎧 ${guest.label}`;
+            refreshMetaBtn.hidden = false;
+            renderGuestButtons();
+            render();
+            refreshMetadata();
+        }
+
+        function renderGuestButtons() {
+            guestPicker.innerHTML = '';
+            guestLists.forEach((guest, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'guest-btn' + (activeGuest === idx ? ' active' : '');
+                btn.textContent = guest.label;
+                btn.addEventListener('click', () => selectGuest(idx));
+                guestPicker.appendChild(btn);
+            });
         }
 
         function playStation(station) {
-            if (audio) {
-                audio.pause();
-                audio = null;
-            }
+            if (audio) { audio.pause(); audio = null; }
             stopMetadataReader();
 
             if (currentStation === station.url) {
@@ -1084,29 +808,19 @@
             });
 
             startMetadataReader(station.url);
-
             currentStation = station.url;
             currentStationName = station.name;
             nowPlayingStation.textContent = `🎵 ${station.name}`;
             nowPlayingTrack.textContent = 'Loading track info...';
-            updateNowPlayingFav();
             nowPlaying.classList.add('visible');
             document.body.classList.add('has-player');
             updateMediaSession(station.name, '');
             render();
-            refreshFavoritesMetadata();
         }
 
-        function getFiltered() {
-            const query = searchInput.value.toLowerCase();
-            return stations.filter(s => !isHidden(s.url) && s.name.toLowerCase().includes(query));
-        }
-
+        // --- Event listeners ---
         stopBtn.addEventListener('click', () => {
-            if (audio) {
-                audio.pause();
-                audio = null;
-            }
+            if (audio) { audio.pause(); audio = null; }
             stopMetadataReader();
             currentStation = null;
             currentStationName = '';
@@ -1115,57 +829,54 @@
             render();
         });
 
-        restoreBtn.addEventListener('click', () => {
-            restoreAllHidden();
-        });
-
         document.getElementById('random-btn').addEventListener('click', () => {
-            const visible = getFiltered();
+            const { favs, others } = getFilteredStations();
+            const visible = [...favs, ...others];
             if (visible.length === 0) return;
             const randomStation = visible[Math.floor(Math.random() * visible.length)];
             playStation(randomStation);
         });
 
-        document.getElementById('refresh-meta-btn').addEventListener('click', () => {
-            refreshFavoritesMetadata();
-        });
-
-        shareBtn.addEventListener('click', () => {
-            const url = generateShareUrl();
-            navigator.clipboard.writeText(url).then(() => {
-                showToast('Link copied to clipboard!');
-                shareBtn.classList.add('copied');
-                setTimeout(() => shareBtn.classList.remove('copied'), 500);
-            }).catch(() => {
-                // Fallback: update the URL bar
-                window.history.replaceState(null, '', url);
-                showToast('URL updated — copy from address bar');
-            });
-        });
-
-        nowPlayingFav.addEventListener('click', () => {
-            if (!currentStation) return;
-            toggleFavorite(currentStation);
-            updateNowPlayingFav();
+        refreshMetaBtn.addEventListener('click', () => {
+            refreshMetadata();
         });
 
         searchInput.addEventListener('input', () => {
             render();
         });
 
-        // Load CSV, then check URL for shared prefs
-        fetch('streams/direct.csv')
+        // --- Media Session actions ---
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('stop', () => stopBtn.click());
+            navigator.mediaSession.setActionHandler('pause', () => { if (audio) audio.pause(); navigator.mediaSession.playbackState = 'paused'; });
+            navigator.mediaSession.setActionHandler('play', () => { if (audio) audio.play(); navigator.mediaSession.playbackState = 'playing'; });
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                const { favs, others } = getFilteredStations();
+                const visible = [...favs, ...others];
+                if (visible.length === 0) return;
+                playStation(visible[Math.floor(Math.random() * visible.length)]);
+            });
+        }
+
+        // --- Load data ---
+        fetch('streams/exclusive-radio.csv')
             .then(res => res.text())
             .then(text => {
-                stations = parseCSV(text);
-
-                // If URL has shared preferences, apply them (overrides localStorage)
-                if (window.location.hash.length > 1) {
-                    loadFromUrl();
+                stations = parseStationsCSV(text);
+                return fetch('streams/guestlists.csv');
+            })
+            .then(res => res.text())
+            .then(text => {
+                const rawGuests = parseGuestCSV(text);
+                guestLists = rawGuests.map(g => {
+                    const { favIndices, hidIndices } = parseBookmarkUrl(g.url);
+                    return { label: g.label, favIndices, hidIndices };
+                });
+                renderGuestButtons();
+                // Auto-select first guest if only one
+                if (guestLists.length === 1) {
+                    selectGuest(0);
                 }
-
-                render();
-                refreshFavoritesMetadata();
             })
             .catch(err => {
                 grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
