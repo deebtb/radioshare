@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blast Radio Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2b6cb0;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .refresh-btn {
+            background: #fbd38d;
+            border: none;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.2) rotate(15deg);
+            background: #f6e05e;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .station-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.15);
+            border-color: #63b3ed;
+        }
+
+        .station-card.playing {
+            border-color: #2b6cb0;
+            box-shadow: 0 0 12px rgba(43, 108, 176, 0.25);
+        }
+
+        .station-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .station-name a {
+            color: inherit;
+            text-decoration: none;
+            border-bottom: 1px dashed #bee3f8;
+        }
+
+        .station-name a:hover {
+            border-bottom-color: #2b6cb0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-live {
+            background: #c6f6d5;
+            color: #276749;
+            animation: pulse-live 2s infinite;
+        }
+
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-archived {
+            background: #fefcbf;
+            color: #975a16;
+        }
+
+        .status-expired {
+            background: #e2e8f0;
+            color: #718096;
+        }
+
+        .status-loading {
+            background: #e2e8f0;
+            color: #a0aec0;
+        }
+
+        .status-error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .station-meta {
+            font-size: 0.8rem;
+            color: #718096;
+        }
+
+        .play-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #2b6cb0;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            align-self: flex-start;
+        }
+
+        .play-btn:hover {
+            background: #2c5282;
+        }
+
+        .play-btn.active {
+            background: #276749;
+        }
+
+        .play-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .now-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a365d;
+            border-top: 3px solid #2b6cb0;
+            padding: 1rem 2rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .now-playing.visible {
+            display: flex;
+        }
+
+        .now-playing-station {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 1rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .now-playing-status {
+            color: #fbd38d;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .stop-btn {
+            padding: 0.5rem 1rem;
+            background: #c53030;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stop-btn:hover {
+            background: #9b2c2c;
+        }
+
+        @media (max-width: 600px) {
+            .stations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            header h1 {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .now-playing {
+                flex-wrap: wrap;
+                padding: 0.75rem 1rem;
+            }
+        }
+
+        body.has-player main {
+            padding-bottom: 6rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📡 Blast Radio</h1>
+        <button class="refresh-btn" id="refresh-btn" aria-label="Refresh statuses" title="Refresh all">🔄</button>
+    </header>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; font-size: 0.9rem;">
+            <strong style="color: #2b6cb0;">Stations:</strong>
+            <a href="index.html" style="margin-left: 0.5rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Genre Presets</a>
+            <span style="margin-left: 1rem; color: #718096;">Blast Radio</span>
+        </nav>
+
+        <section>
+            <h2 class="section-title">Shows</h2>
+            <div class="stations-grid" id="stations-grid"></div>
+        </section>
+    </main>
+
+    <div class="now-playing" id="now-playing">
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-status" id="now-playing-status"></span>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        // Change this to your Worker URL once deployed.
+        // During testing with workers.dev: 'https://blast-status.YOUR_SUBDOMAIN.workers.dev'
+        // After route setup: '/api/blast'
+        const WORKER_URL = 'https://blast-status.deebeyondthebar.workers.dev';
+
+        const SHOWS = [
+            { handle: 'deepspaceradio', name: 'Deep Space Radio' },
+            { handle: 'getrocked', name: 'Get Rocked' },
+            { handle: 'richpasternack', name: 'Rich Pasternack' },
+        ];
+
+        const grid = document.getElementById('stations-grid');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingStatus = document.getElementById('now-playing-status');
+        const stopBtn = document.getElementById('stop-btn');
+
+        let audio = null;
+        let currentHandle = null;
+        let showStatuses = {}; // handle -> status data from worker
+
+        function formatTime(unix) {
+            if (!unix) return '';
+            const d = new Date(unix * 1000);
+            return d.toLocaleString();
+        }
+
+        function timeSince(unix) {
+            if (!unix) return '';
+            const seconds = Math.floor((Date.now() / 1000) - unix);
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        function createCard(show, status) {
+            const card = document.createElement('div');
+            card.className = 'station-card' + (currentHandle === show.handle ? ' playing' : '');
+            card.id = `card-${show.handle}`;
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'station-name';
+            nameEl.innerHTML = `<a href="https://blastradio.com/${show.handle}" target="_blank" rel="noopener">${show.name}</a>`;
+
+            const badge = document.createElement('span');
+            badge.className = 'status-badge';
+
+            const meta = document.createElement('div');
+            meta.className = 'station-meta';
+
+            if (!status) {
+                badge.className += ' status-loading';
+                badge.textContent = 'Loading...';
+                meta.textContent = '';
+            } else if (status.state === 'live') {
+                badge.className += ' status-live';
+                badge.textContent = '● Live';
+                const parts = [];
+                if (status.start) parts.push(`Started ${timeSince(status.start)}`);
+                if (status.listeners != null) parts.push(`${status.listeners} listener${status.listeners !== 1 ? 's' : ''}`);
+                meta.textContent = parts.join(' · ');
+            } else if (status.state === 'archived') {
+                badge.className += ' status-archived';
+                badge.textContent = '⏺ Archived';
+                const parts = [];
+                if (status.end) parts.push(`Ended ${timeSince(status.end)}`);
+                meta.textContent = parts.join(' · ');
+            } else if (status.state === 'expired') {
+                badge.className += ' status-expired';
+                badge.textContent = 'Expired';
+                if (status.end) meta.textContent = `Last broadcast ended ${timeSince(status.end)}`;
+            } else if (status.state === 'error') {
+                badge.className += ' status-error';
+                badge.textContent = 'Error';
+                meta.textContent = status.error || '';
+            } else {
+                badge.className += ' status-expired';
+                badge.textContent = 'Idle';
+                meta.textContent = status.message || 'No recent broadcast';
+            }
+
+            const btn = document.createElement('button');
+            btn.className = 'play-btn' + (currentHandle === show.handle ? ' active' : '');
+            const playable = status && (status.state === 'live' || status.state === 'archived') && status.url;
+            btn.disabled = !playable;
+
+            if (currentHandle === show.handle) {
+                btn.textContent = '⏸ Playing';
+            } else if (status && status.state === 'live') {
+                btn.textContent = '▶ Listen Live';
+            } else if (status && status.state === 'archived') {
+                btn.textContent = '▶ Play Archive';
+            } else {
+                btn.textContent = '▶ Play';
+            }
+
+            btn.addEventListener('click', () => {
+                if (playable) playShow(show, status);
+            });
+
+            card.appendChild(nameEl);
+            card.appendChild(badge);
+            card.appendChild(meta);
+            card.appendChild(btn);
+            return card;
+        }
+
+        function render() {
+            grid.innerHTML = '';
+            // Sort: live first, archived second, rest last
+            const sorted = [...SHOWS].sort((a, b) => {
+                const order = { live: 0, archived: 1, expired: 2, none: 3, error: 4 };
+                const sa = showStatuses[a.handle];
+                const sb = showStatuses[b.handle];
+                const oa = sa ? (order[sa.state] ?? 3) : 5;
+                const ob = sb ? (order[sb.state] ?? 3) : 5;
+                return oa - ob;
+            });
+            sorted.forEach(show => {
+                grid.appendChild(createCard(show, showStatuses[show.handle]));
+            });
+        }
+
+        function playShow(show, status) {
+            if (audio) { audio.pause(); audio = null; }
+
+            if (currentHandle === show.handle) {
+                currentHandle = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+                return;
+            }
+
+            audio = new Audio(status.url);
+            audio.play().catch(() => {
+                alert('Unable to play this stream. It may be offline or expired.');
+                currentHandle = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+            });
+
+            currentHandle = show.handle;
+            nowPlayingStation.textContent = `📡 ${show.name}`;
+            nowPlayingStatus.textContent = status.state === 'live' ? 'Live broadcast' : 'Playing archive';
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            render();
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (audio) { audio.pause(); audio = null; }
+            currentHandle = null;
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            render();
+        });
+
+        async function fetchStatuses() {
+            const handles = SHOWS.map(s => s.handle).join(',');
+            try {
+                const resp = await fetch(`${WORKER_URL}?handle=${handles}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                // Response is an array when multiple handles
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        showStatuses[item.handle] = item;
+                    });
+                } else {
+                    // Single handle response
+                    showStatuses[data.handle] = data;
+                }
+            } catch (err) {
+                console.error('Failed to fetch blast statuses:', err);
+                SHOWS.forEach(show => {
+                    if (!showStatuses[show.handle]) {
+                        showStatuses[show.handle] = { handle: show.handle, state: 'error', error: 'Network error' };
+                    }
+                });
+            }
+            render();
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            showStatuses = {};
+            render();
+            fetchStatuses();
+        });
+
+        // Initial load
+        render();
+        fetchStatuses();
+    </script>
+</body>
+</html>
