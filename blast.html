@@ -494,6 +494,40 @@
         // Initial load
         render();
         fetchStatuses();
+
+        // Poll every 60 seconds while any show is live
+        let pollInterval = null;
+
+        function startPolling() {
+            if (pollInterval) return;
+            pollInterval = setInterval(() => {
+                const anyLive = Object.values(showStatuses).some(s => s.state === 'live');
+                if (anyLive) {
+                    fetchStatuses();
+                } else {
+                    stopPolling();
+                }
+            }, 60000);
+        }
+
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        // Override render to manage polling based on state
+        const _originalRender = render;
+        render = function() {
+            _originalRender();
+            const anyLive = Object.values(showStatuses).some(s => s.state === 'live');
+            if (anyLive) {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
     </script>
 </body>
 </html>
