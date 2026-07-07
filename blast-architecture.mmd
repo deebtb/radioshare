@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant User as User Browser
+    participant GH as GitHub Pages<br/>(deeradio.uk/blast.html)
+    participant CF as Cloudflare Worker<br/>(blast-status.workers.dev)
+    participant BR as blastradio.com
+
+    User->>GH: Opens blast.html
+    GH-->>User: Returns static HTML/JS
+
+    Note over User: JavaScript runs, calls Worker
+
+    User->>CF: GET ?handle=deepspaceradio,getrocked,richpasternack
+
+    par For each handle (parallel)
+        CF->>BR: GET /deepspaceradio
+        BR-->>CF: HTML page (~350KB)
+        CF->>CF: Parse embedded JSON,<br/>extract state + URLs
+    and
+        CF->>BR: GET /getrocked
+        BR-->>CF: HTML page
+        CF->>CF: Parse
+    and
+        CF->>BR: GET /richpasternack
+        BR-->>CF: HTML page
+        CF->>CF: Parse
+    end
+
+    CF-->>User: JSON response<br/>[{state:"live", url:"..."}, ...]
+
+    Note over User: Page renders status badges,<br/>play buttons become active
+
+    User->>BR: Audio stream (direct)<br/>https://broadcast.blastradio.com/{id}.mp3
+    Note over User,BR: Audio plays directly from Blast —<br/>Worker not involved in streaming
