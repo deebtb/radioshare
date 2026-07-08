@@ -49,6 +49,7 @@ export default {
     let station = 'unknown';
     let page = 'unknown';
     let action = 'play';
+    let visitorId = 'anonymous';
 
     if (request.method === 'POST') {
       try {
@@ -56,23 +57,21 @@ export default {
         station = body.station || 'unknown';
         page = body.page || 'unknown';
         action = body.action || 'play';
+        visitorId = body.visitor || 'anonymous';
       } catch {
         return new Response('Bad JSON', { status: 400, headers: corsHeaders() });
       }
     } else {
-      // GET fallback: ?station=X&page=Y&action=Z
+      // GET fallback: ?station=X&page=Y&action=Z&visitor=V
       const url = new URL(request.url);
       station = url.searchParams.get('station') || 'unknown';
       page = url.searchParams.get('page') || 'unknown';
       action = url.searchParams.get('action') || 'play';
+      visitorId = url.searchParams.get('visitor') || 'anonymous';
     }
 
-    // Get visitor info from Cloudflare headers
-    const country = request.headers.get('cf-connecting-country') || 'unknown';
-    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-
-    // Hash the IP for a pseudo-anonymous visitor ID (not PII)
-    const visitorId = await hashIP(ip);
+    // Get visitor info from request.cf (always available in Workers)
+    const country = (request.cf && request.cf.country) || 'unknown';
 
     // Write to Analytics Engine
     if (env.PLAYS) {
@@ -82,7 +81,7 @@ export default {
           page.slice(0, 50),       // blob2: page (index, bob, blast, etc.)
           action.slice(0, 20),     // blob3: action (play, stop)
           country,                 // blob4: country code
-          visitorId,               // blob5: hashed visitor ID
+          visitorId,               // blob5: visitor GUID from client
         ],
         doubles: [1],              // double1: event count (always 1)
         indexes: [station.slice(0, 96)], // index: station (for efficient queries)
@@ -102,14 +101,4 @@ function corsHeaders() {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
-}
-
-async function hashIP(ip) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + '-deeradio-salt');
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  const arr = new Uint8Array(hash);
-  return Array.from(arr.slice(0, 8))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
 }
