@@ -483,6 +483,7 @@
         <button class="now-playing-fav" id="now-playing-fav" aria-label="Favorite current station" title="Favorite this station">☆</button>
     </div>
 
+    <script src="tracker.js"></script>
     <script>
         const grid = document.getElementById('stations-grid');
         const favGrid = document.getElementById('favorites-grid');
@@ -1086,6 +1087,7 @@
 
             currentStation = station.url;
             currentStationName = station.name;
+            trackPlay(station.name, 'radio-bob');
             nowPlayingStation.textContent = `🎵 ${station.name}`;
             nowPlayingTrack.textContent = '';
             updateNowPlayingFav();

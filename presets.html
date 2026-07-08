@@ -300,6 +300,7 @@
         <span class="now-playing-track" id="now-playing-track"></span>
     </div>
 
+    <script src="tracker.js"></script>
     <script>
         const genreButtonsEl = document.getElementById('genre-buttons');
         const stationsSection = document.getElementById('stations-section');
@@ -459,6 +460,7 @@
             startMetadataReader(station.url);
 
             currentStation = station.url;
+            trackPlay(station.name, 'presets');
             nowPlayingStation.textContent = `🎵 ${station.name}`;
             nowPlayingTrack.textContent = '';
             nowPlaying.classList.add('visible');

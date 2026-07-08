@@ -391,6 +391,7 @@
         <span class="now-playing-track" id="now-playing-track"></span>
     </div>
 
+    <script src="tracker.js"></script>
     <script>
         const grid = document.getElementById('stations-grid');
         const searchInput = document.getElementById('search');
@@ -811,6 +812,7 @@
             startMetadataReader(station.url);
             currentStation = station.url;
             currentStationName = station.name;
+            trackPlay(station.name, 'guest-picks');
             nowPlayingStation.textContent = `🎵 ${station.name}`;
             nowPlayingTrack.textContent = 'Loading track info...';
             nowPlaying.classList.add('visible');

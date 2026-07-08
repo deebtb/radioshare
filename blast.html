@@ -289,6 +289,7 @@
         <span class="now-playing-status" id="now-playing-status"></span>
     </div>
 
+    <script src="tracker.js"></script>
     <script>
         // --- Configuration ---
         // Change this to your Worker URL once deployed.
@@ -443,6 +444,7 @@
             });
 
             currentHandle = show.handle;
+            trackPlay(show.name, 'blast');
             nowPlayingStation.textContent = `📡 ${show.name}`;
             nowPlayingStatus.textContent = status.state === 'live' ? 'Live broadcast' : 'Playing archive';
             nowPlaying.classList.add('visible');
