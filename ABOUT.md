@@ -99,3 +99,134 @@ This tells GitHub Pages to respond to requests for `deeradio.uk`. Without it, Gi
 - **To add a subdomain (e.g., api.deeradio.uk):** Add a DNS record in Cloudflare pointing to whatever service backs it. Does not affect the GitHub Pages setup.
 - **SSL errors / redirect loops:** Almost always caused by the SSL/TLS mode being set to "Flexible" instead of "Full". Check Cloudflare → SSL/TLS → Overview.
 - **GitHub Pages 404 on custom domain:** Verify the `CNAME` file exists in the deployed branch and that the custom domain is confirmed in repo Settings → Pages.
+
+---
+
+## Cloudflare Workers
+
+Two Workers are deployed under the `deebeyondthebar` subdomain on workers.dev:
+
+### blast-status
+
+- **URL:** `https://blast-status.deebeyondthebar.workers.dev`
+- **Purpose:** Proxy/parser for Blast Radio show status. Fetches blastradio.com profile pages (which block browser CORS), parses embedded JSON to extract broadcast state, and returns clean JSON.
+- **Source:** `workers/blast-status.js`
+- **Bindings:** None
+- **Called by:** `blast.html` on page load and via 60-second polling while a show is live.
+
+### play-tracker
+
+- **URL:** `https://play-tracker.deebeyondthebar.workers.dev`
+- **Purpose:** Receives play/stop events from all pages and writes them to Cloudflare Analytics Engine.
+- **Source:** `workers/play-tracker.js`
+- **Bindings:** Analytics Engine dataset `plays` (variable name: `PLAYS`)
+- **Called by:** `tracker.js` (included on all pages) via `navigator.sendBeacon()`.
+
+### Updating Workers
+
+Workers are deployed via the Cloudflare dashboard (copy-paste). There is no Wrangler CLI or CI/CD set up. To update:
+
+1. Edit the source file in `workers/`
+2. Cloudflare dashboard → Workers & Pages → select the Worker → Edit Code
+3. Paste the new code → Save and Deploy
+
+---
+
+## Play Event Tracking
+
+Custom analytics tracking what stations are being listened to, implemented entirely within Cloudflare (no third-party scripts).
+
+### How It Works
+
+```
+User clicks Play
+    │
+    ▼
+tracker.js (included on all pages)
+    │  navigator.sendBeacon() — fire-and-forget POST
+    │  Payload: {station, page, action, visitor}
+    ▼
+┌─────────────────────────────────┐
+│  play-tracker Worker            │
+│  • Reads request.cf.country     │
+│  • Writes to Analytics Engine   │
+└─────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────┐
+│  Analytics Engine (dataset:     │
+│  "plays")                       │
+│  • 3-month retention            │
+│  • Queryable via SQL API        │
+└─────────────────────────────────┘
+```
+
+### Data Schema (per event)
+
+| Field | Analytics Engine Slot | Content |
+|-------|----------------------|---------|
+| Station name | blob1 | e.g., "Exclusively Beatles" |
+| Page | blob2 | e.g., "exclusive-radio", "radio-bob", "blast", "guest-picks", "other", "presets" |
+| Action | blob3 | "play" or "stop" |
+| Country | blob4 | ISO country code from `request.cf.country` |
+| Visitor ID | blob5 | UUID from client localStorage |
+| Count | double1 | Always 1 (for aggregation) |
+| Index | indexes[0] | Station name (for efficient queries) |
+
+### Visitor Identification
+
+- A UUID is generated on first visit via `crypto.randomUUID()` and stored in `localStorage` as `deeradio_visitor`.
+- The same ID persists across sessions on the same browser/device.
+- No cookies, no PII, no third-party tracking. The ID is meaningless outside the context of this analytics.
+- Clearing localStorage resets the ID (new "visitor" from analytics perspective).
+
+### tracker.js
+
+Included via `<script src="tracker.js"></script>` on every page before the main script. Exposes two functions:
+
+```javascript
+trackPlay(stationName, pageName)  // Called when playback starts
+trackStop(stationName, pageName)  // Available for stop events
+```
+
+### Querying Analytics
+
+Use the Python script `scripts/analytics.py`:
+
+```bash
+python scripts/analytics.py              # All reports
+python scripts/analytics.py today        # Today's plays
+python scripts/analytics.py top_stations # Top stations (7 days)
+python scripts/analytics.py by_country   # Plays by country
+python scripts/analytics.py unique_listeners  # Unique visitors per page
+python scripts/analytics.py recent       # Last 20 events (raw)
+```
+
+Requires `.env` file (gitignored) with:
+
+```
+CF_ACCOUNT_ID=<your_account_id>
+CF_API_TOKEN=<your_api_token>
+```
+
+The API token needs "Analytics Read" permission. Create it at: My Profile → API Tokens → Create Token.
+
+### Raw SQL Queries
+
+You can also query directly via curl:
+
+```bash
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/analytics_engine/sql" \
+  -H "Authorization: Bearer $CF_API_TOKEN" \
+  -d "SELECT blob1 as station, count() as plays FROM plays WHERE timestamp > now() - interval '7' day GROUP BY station ORDER BY plays DESC LIMIT 20"
+```
+
+### Data Retention
+
+Analytics Engine retains data for **3 months**. No archival or export is configured.
+
+### Adding Tracking to a New Page
+
+1. Include `<script src="tracker.js"></script>` before the main `<script>` tag.
+2. Call `trackPlay(station.name, 'your-page-id')` inside the `playStation()` function after `currentStation` is set.
+3. Optionally call `trackStop()` on stop if you want stop events tracked.
