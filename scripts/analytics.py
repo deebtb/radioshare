@@ -60,7 +60,7 @@ QUERIES = {
         ORDER BY unique_listeners DESC
     """,
     "recent": """
-        SELECT timestamp, blob1 as station, blob2 as page, blob3 as action, blob4 as country
+        SELECT timestamp, blob1 as station, blob2 as page, blob3 as action, blob4 as country, blob5 as visitor
         FROM plays
         ORDER BY timestamp DESC
         LIMIT 20
