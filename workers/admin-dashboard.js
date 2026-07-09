@@ -39,7 +39,7 @@ async function handleStats(env) {
   }
 
   try {
-    const [topStations, recentActivity, overview, byCountry] = await Promise.all([
+    const [topStations, recentActivity, overview, byCountry, stationListeners] = await Promise.all([
       queryAnalytics(env, `
         SELECT blob1 as station, blob2 as page, count() as plays, count(DISTINCT blob5) as visitors
         FROM plays
@@ -71,6 +71,14 @@ async function handleStats(env) {
         ORDER BY plays DESC
         LIMIT 15
       `),
+      queryAnalytics(env, `
+        SELECT blob1 as station, blob5 as visitor, count() as plays
+        FROM plays
+        WHERE timestamp > now() - interval '7' day AND blob3 = 'play' AND blob5 != 'anonymous'
+        GROUP BY station, visitor
+        ORDER BY station, plays DESC
+        LIMIT 100
+      `),
     ]);
 
     return jsonResponse({
@@ -78,6 +86,7 @@ async function handleStats(env) {
       recentActivity: recentActivity || [],
       overview: (overview && overview[0]) || {},
       byCountry: byCountry || [],
+      stationListeners: stationListeners || [],
     });
   } catch (err) {
     return jsonResponse({ error: err.message }, 500);
@@ -191,6 +200,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="top-stations"><p class="loading">Loading...</p></div>
         </section>
         <section>
+            <h2 class="section-title">Station Listeners (7 days)</h2>
+            <div id="station-listeners"><p class="loading">Loading...</p></div>
+        </section>
+        <section>
             <h2 class="section-title">By Country (7 days)</h2>
             <div id="by-country"><p class="loading">Loading...</p></div>
         </section>
@@ -232,6 +245,26 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById('top-stations').innerHTML = html;
             } else {
                 document.getElementById('top-stations').innerHTML = '<p class="loading">No data yet.</p>';
+            }
+
+            // Station listeners (grouped by station, showing visitor GUIDs)
+            if (data.stationListeners.length > 0) {
+                // Group by station
+                const grouped = {};
+                data.stationListeners.forEach(row => {
+                    if (!grouped[row.station]) grouped[row.station] = [];
+                    grouped[row.station].push({ visitor: row.visitor, plays: row.plays });
+                });
+                let html = '<table class="data-table"><tr><th>Station</th><th>Visitor</th><th>Plays</th></tr>';
+                Object.keys(grouped).forEach(station => {
+                    grouped[station].forEach((v, i) => {
+                        html += '<tr><td>' + (i === 0 ? esc(station) : '') + '</td><td>' + v.visitor.slice(0,8) + '...</td><td>' + v.plays + '</td></tr>';
+                    });
+                });
+                html += '</table>';
+                document.getElementById('station-listeners').innerHTML = html;
+            } else {
+                document.getElementById('station-listeners').innerHTML = '<p class="loading">No data yet.</p>';
             }
 
             // By country
