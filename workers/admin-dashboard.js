@@ -1,15 +1,16 @@
 /**
  * Cloudflare Worker: Admin Dashboard
  *
- * Serves the admin dashboard HTML and queries Analytics Engine directly.
+ * Serves the admin dashboard HTML and queries Analytics Engine via REST API.
  * Protected by Cloudflare Access on admin.deeradio.uk.
  *
  * Deploy:
  *   1. Create a new Worker named "admin-dashboard"
  *   2. Paste this code
- *   3. Add Analytics Engine binding: Variable name: PLAYS, Dataset: plays
- *   4. In Worker Settings → Triggers → Custom Domains: add admin.deeradio.uk
- *      (Or add a DNS CNAME record for admin → this worker, and a route)
+ *   3. Add secrets (Settings → Variables and Secrets):
+ *      - CF_ACCOUNT_ID (type: secret) = your account ID
+ *      - CF_API_TOKEN (type: secret) = your analytics API token
+ *   4. Connect to admin.deeradio.uk (Custom Domain or DNS CNAME)
  *   5. Cloudflare Access protects admin.deeradio.uk (already configured)
  *
  * Routes:
@@ -33,8 +34,8 @@ export default {
 };
 
 async function handleStats(env) {
-  if (!env.PLAYS) {
-    return jsonResponse({ error: 'Analytics Engine not bound' }, 500);
+  if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) {
+    return jsonResponse({ error: 'Missing CF_ACCOUNT_ID or CF_API_TOKEN secrets' }, 500);
   }
 
   try {
@@ -73,10 +74,10 @@ async function handleStats(env) {
     ]);
 
     return jsonResponse({
-      topStations: topStations.data || [],
-      recentActivity: recentActivity.data || [],
-      overview: overview.data?.[0] || {},
-      byCountry: byCountry.data || [],
+      topStations: topStations || [],
+      recentActivity: recentActivity || [],
+      overview: (overview && overview[0]) || {},
+      byCountry: byCountry || [],
     });
   } catch (err) {
     return jsonResponse({ error: err.message }, 500);
@@ -84,13 +85,24 @@ async function handleStats(env) {
 }
 
 async function queryAnalytics(env, sql) {
-  // Workers Analytics Engine SQL query via binding
-  const results = await env.PLAYS.sql(sql.trim());
-  const data = [];
-  for await (const row of results) {
-    data.push(row);
+  const resp = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.CF_API_TOKEN}`,
+      },
+      body: sql.trim(),
+    }
+  );
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Analytics API error: HTTP ${resp.status} - ${text.slice(0, 200)}`);
   }
-  return { data };
+
+  const data = await resp.json();
+  return data.data || [];
 }
 
 function jsonResponse(data, status = 200) {
