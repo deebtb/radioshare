@@ -182,6 +182,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 <body>
     <header>
         <h1>&#128274; Admin Dashboard</h1>
+        <a href="https://deeradio.uk" style="color: #bee3f8; text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid #63b3ed;">&#8592; deeradio.uk</a>
         <button class="refresh-btn" id="refresh-btn" title="Refresh data">&#128260;</button>
         <span class="header-meta" id="header-meta"></span>
     </header>
