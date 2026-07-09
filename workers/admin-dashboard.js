@@ -41,7 +41,7 @@ async function handleStats(env) {
   try {
     const [topStations, recentActivity, overview, byCountry] = await Promise.all([
       queryAnalytics(env, `
-        SELECT blob1 as station, blob2 as page, count() as plays
+        SELECT blob1 as station, blob2 as page, count() as plays, count(DISTINCT blob5) as visitors
         FROM plays
         WHERE timestamp > now() - interval '7' day AND blob3 = 'play'
         GROUP BY station, page
@@ -224,9 +224,9 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
             // Top stations table
             if (data.topStations.length > 0) {
-                let html = '<table class="data-table"><tr><th>#</th><th>Station</th><th>Page</th><th>Plays</th></tr>';
+                let html = '<table class="data-table"><tr><th>#</th><th>Station</th><th>Page</th><th>Plays</th><th>Visitors</th></tr>';
                 data.topStations.forEach((row, i) => {
-                    html += '<tr><td>' + (i+1) + '</td><td>' + esc(row.station) + '</td><td>' + esc(row.page) + '</td><td>' + row.plays + '</td></tr>';
+                    html += '<tr><td>' + (i+1) + '</td><td>' + esc(row.station) + '</td><td>' + esc(row.page) + '</td><td>' + row.plays + '</td><td>' + (row.visitors || 0) + '</td></tr>';
                 });
                 html += '</table>';
                 document.getElementById('top-stations').innerHTML = html;
