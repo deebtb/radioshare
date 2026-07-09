@@ -38,9 +38,10 @@ User request
 | Environment | URL | Purpose |
 |-------------|-----|---------|
 | Production  | `https://deeradio.uk` | Public-facing site via Cloudflare |
+| Admin       | `https://admin.deeradio.uk` | Authenticated analytics dashboard (Cloudflare Worker + Access) |
 | Staging     | `https://dscharton.github.io/radioshare` | Pre-production testing via GitHub Pages directly |
 
-Both environments serve the same content from the same branch. The staging URL bypasses Cloudflare entirely.
+Production and Staging serve the same content from the same branch. The staging URL bypasses Cloudflare entirely. Admin is a separate Worker-served app behind authentication.
 
 ---
 
@@ -55,6 +56,7 @@ Domain `deeradio.uk` is registered and managed on Cloudflare.
 | A     | @     | 185.199.110.153      | Proxied (orange) |
 | A     | @     | 185.199.111.153      | Proxied (orange) |
 | CNAME | www   | dscharton.github.io  | Proxied (orange) |
+| CNAME | admin | admin-dashboard.deebeyondthebar.workers.dev | Proxied (orange) |
 
 The four `A` records are GitHub Pages' IP addresses. The `CNAME` for `www` aliases to the GitHub Pages subdomain.
 
@@ -104,7 +106,7 @@ This tells GitHub Pages to respond to requests for `deeradio.uk`. Without it, Gi
 
 ## Cloudflare Workers
 
-Two Workers are deployed under the `deebeyondthebar` subdomain on workers.dev:
+Three Workers are deployed under the `deebeyondthebar` subdomain on workers.dev:
 
 ### blast-status
 
@@ -121,6 +123,29 @@ Two Workers are deployed under the `deebeyondthebar` subdomain on workers.dev:
 - **Source:** `workers/play-tracker.js`
 - **Bindings:** Analytics Engine dataset `plays` (variable name: `PLAYS`)
 - **Called by:** `tracker.js` (included on all pages) via `navigator.sendBeacon()`.
+
+### admin-dashboard
+
+- **URL:** `https://admin.deeradio.uk`
+- **Purpose:** Serves the admin dashboard and queries Analytics Engine via REST API. Combines the HTML frontend and analytics API in a single Worker.
+- **Source:** `workers/admin-dashboard.js`
+- **Secrets:** `CF_ACCOUNT_ID`, `CF_API_TOKEN` (stored as encrypted secrets in Worker settings)
+- **Bindings:** None (uses REST API to query Analytics Engine)
+- **Protected by:** Cloudflare Access (Zero Trust). Only authenticated emails can access.
+- **Routes:**
+  - `GET /` → Dashboard HTML
+  - `GET /api/stats` → JSON analytics data (top stations, recent activity, overview, country breakdown, station listeners)
+
+### Cloudflare Access (Zero Trust)
+
+The `admin.deeradio.uk` subdomain is protected by Cloudflare Access (free tier, up to 50 users).
+
+- **Authentication method:** One-time PIN (email code)
+- **Policy:** Allow specific email address(es) only
+- **Configuration:** Zero Trust dashboard → Access → Applications
+- **Session duration:** 24 hours (configurable)
+
+Visitors to `admin.deeradio.uk` see a Cloudflare login gate. After entering an approved email, they receive a one-time code. Once authenticated, the session persists for the configured duration.
 
 ### Updating Workers
 
