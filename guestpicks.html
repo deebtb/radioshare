@@ -169,14 +169,16 @@
         .station-card {
             background: #fff;
             border-radius: 12px;
-            padding: 1.25rem;
+            padding: 1rem 1.25rem;
             border: 1px solid #e2e8f0;
             transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            justify-content: center;
+            gap: 0.4rem;
             position: relative;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            min-height: 70px;
         }
 
         .station-card:hover {
@@ -186,15 +188,16 @@
         }
 
         .station-card.playing {
-            border-color: #2b6cb0;
-            box-shadow: 0 0 12px rgba(43, 108, 176, 0.25);
+            border-color: #276749;
+            background: #f0fff4;
+            box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
         }
 
         .station-name {
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.05rem;
+            font-weight: 700;
             color: #1a202c;
-            padding-right: 2rem;
+            padding-right: 2.5rem;
         }
 
         .station-track {
@@ -205,12 +208,14 @@
             overflow: hidden;
             text-overflow: ellipsis;
             min-height: 1.1em;
+            padding-right: 2.5rem;
         }
 
         .fav-btn {
             position: absolute;
-            top: 0.75rem;
+            top: 50%;
             right: 0.75rem;
+            transform: translateY(-50%);
             background: none;
             border: none;
             font-size: 1.25rem;
@@ -222,28 +227,10 @@
         }
 
         .fav-btn:hover {
-            transform: scale(1.2);
+            transform: translateY(-50%) scale(1.2);
         }
 
-        .play-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: #2b6cb0;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: background 0.2s;
-            align-self: flex-start;
-        }
 
-        .play-btn:hover {
-            background: #2c5282;
-        }
 
         .play-btn.active {
             background: #276749;
@@ -363,15 +350,15 @@
     </header>
 
     <main>
-        <nav style="margin-bottom: 1.5rem; font-size: 0.9rem;">
-            <strong style="color: #2b6cb0;">Stations:</strong>
-            <a href="index.html" style="margin-left: 0.5rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Radio</a>
-            <span style="margin-left: 1rem; color: #718096;">Exclusive Guest Picks</span>
-            <a href="bob.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Radio BOB</a>
-            <a href="other.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Other Stations</a>
-            <a href="presets.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Genre Presets</a>
-            <a href="blast.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Blast Radio</a>
-            <a href="years.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Music by Year</a>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Exclusive Guest Picks</span>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
         </nav>
 
         <div class="guest-picker" id="guest-picker"></div>
@@ -707,6 +694,10 @@
         function createCard(station, isFav) {
             const card = document.createElement('div');
             card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
+            card.style.cursor = 'pointer';
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', `Play ${station.name}`);
+            card.addEventListener('click', () => playStation(station));
 
             if (isFav) {
                 const favBtn = document.createElement('button');
@@ -714,6 +705,7 @@
                 favBtn.textContent = '★';
                 favBtn.setAttribute('aria-label', `${station.name} - bookmarked`);
                 favBtn.style.cursor = 'default';
+                favBtn.addEventListener('click', (e) => e.stopPropagation());
                 card.appendChild(favBtn);
             }
 
@@ -726,15 +718,8 @@
             track.setAttribute('data-track-url', station.url);
             track.textContent = favTrackInfo[station.url] || '';
 
-            const btn = document.createElement('button');
-            btn.className = 'play-btn' + (currentStation === station.url ? ' active' : '');
-            btn.textContent = currentStation === station.url ? '⏸ Playing' : '▶ Play';
-            btn.setAttribute('aria-label', `Play ${station.name}`);
-            btn.addEventListener('click', () => playStation(station));
-
             card.appendChild(name);
             card.appendChild(track);
-            card.appendChild(btn);
             return card;
         }
 

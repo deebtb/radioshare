@@ -22,14 +22,14 @@
         .random-btn:hover { transform: scale(1.2) rotate(15deg); background: #f6e05e; }
         main { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
         .years-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 0.5rem; margin-bottom: 2rem;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 0.6rem; margin-bottom: 2rem;
         }
         .year-btn {
-            padding: 0.75rem 0.5rem; background: #fff; border: 2px solid #e2e8f0;
-            border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 600;
+            padding: 1rem 0.75rem; background: #fff; border: 2px solid #e2e8f0;
+            border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: 600;
             color: #2d3748; transition: all 0.2s; text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); min-height: 52px;
         }
         .year-btn:hover { border-color: #63b3ed; background: #ebf8ff; transform: translateY(-1px); }
         .year-btn.active { background: #2b6cb0; color: #fff; border-color: #2b6cb0; }
@@ -52,7 +52,7 @@
         }
         .stop-btn:hover { background: #9b2c2c; }
         @media (max-width: 600px) {
-            .years-grid { grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); }
+            .years-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); }
             header { padding: 0.75rem 1rem; flex-direction: column; align-items: stretch; }
             header h1 { text-align: center; margin-bottom: 0.5rem; }
             .now-playing { flex-wrap: wrap; padding: 0.75rem 1rem; }
@@ -68,15 +68,15 @@
     </header>
 
     <main>
-        <nav style="margin-bottom: 1.5rem; font-size: 0.9rem;">
-            <strong style="color: #2b6cb0;">Stations:</strong>
-            <a href="index.html" style="margin-left: 0.5rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Radio</a>
-            <a href="guestpicks.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Guest Picks</a>
-            <a href="bob.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Radio BOB</a>
-            <a href="other.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Other Stations</a>
-            <a href="presets.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Genre Presets</a>
-            <a href="blast.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Blast Radio</a>
-            <span style="margin-left: 1rem; color: #718096;">Music by Year</span>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Music by Year</span>
         </nav>
 
         <div class="years-grid" id="years-grid"></div>

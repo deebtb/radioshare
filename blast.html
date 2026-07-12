@@ -91,13 +91,14 @@
         }
 
         .station-card.playing {
-            border-color: #2b6cb0;
-            box-shadow: 0 0 12px rgba(43, 108, 176, 0.25);
+            border-color: #276749;
+            background: #f0fff4;
+            box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
         }
 
         .station-name {
             font-size: 1.1rem;
-            font-weight: 600;
+            font-weight: 700;
             color: #1a202c;
         }
 
@@ -157,34 +158,7 @@
             color: #718096;
         }
 
-        .play-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: #2b6cb0;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: background 0.2s;
-            align-self: flex-start;
-        }
 
-        .play-btn:hover {
-            background: #2c5282;
-        }
-
-        .play-btn.active {
-            background: #276749;
-        }
-
-        .play-btn:disabled {
-            background: #a0aec0;
-            cursor: not-allowed;
-        }
 
         .now-playing {
             position: fixed;
@@ -267,15 +241,15 @@
     </header>
 
     <main>
-        <nav style="margin-bottom: 1.5rem; font-size: 0.9rem;">
-            <strong style="color: #2b6cb0;">Stations:</strong>
-            <a href="index.html" style="margin-left: 0.5rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Radio</a>
-            <a href="guestpicks.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Exclusive Guest Picks</a>
-            <a href="bob.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Radio BOB</a>
-            <a href="other.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Other Stations</a>
-            <a href="presets.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Genre Presets</a>
-            <span style="margin-left: 1rem; color: #718096;">Blast Radio</span>
-            <a href="years.html" style="margin-left: 1rem; color: #2b6cb0; text-decoration: none; border-bottom: 1px solid #bee3f8;">Music by Year</a>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Blast Radio</span>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
         </nav>
 
         <section>
@@ -384,29 +358,16 @@
                 meta.textContent = status.message || 'No recent broadcast';
             }
 
-            const btn = document.createElement('button');
-            btn.className = 'play-btn' + (currentHandle === show.handle ? ' active' : '');
             const playable = status && (status.state === 'live' || status.state === 'archived') && status.url;
-            btn.disabled = !playable;
-
-            if (currentHandle === show.handle) {
-                btn.textContent = '⏸ Playing';
-            } else if (status && status.state === 'live') {
-                btn.textContent = '▶ Listen Live';
-            } else if (status && status.state === 'archived') {
-                btn.textContent = '▶ Play Archive';
-            } else {
-                btn.textContent = '▶ Play';
+            if (playable) {
+                card.style.cursor = 'pointer';
+                card.setAttribute('role', 'button');
+                card.addEventListener('click', () => playShow(show, status));
             }
-
-            btn.addEventListener('click', () => {
-                if (playable) playShow(show, status);
-            });
 
             card.appendChild(nameEl);
             card.appendChild(badge);
             card.appendChild(meta);
-            card.appendChild(btn);
             return card;
         }
 
