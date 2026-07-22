@@ -22,23 +22,27 @@ export default {
       });
     }
 
-    const handleParam = url.searchParams.get('handle');
-    if (!handleParam) {
-      return jsonResponse({ error: 'Missing ?handle= parameter' }, 400);
+    try {
+      const handleParam = url.searchParams.get('handle');
+      if (!handleParam) {
+        return jsonResponse({ error: 'Missing ?handle= parameter' }, 400);
+      }
+
+      const handles = handleParam.split(',').map(h => h.trim()).filter(Boolean);
+      if (handles.length === 0) {
+        return jsonResponse({ error: 'No valid handles provided' }, 400);
+      }
+
+      if (handles.length > 20) {
+        return jsonResponse({ error: 'Max 20 handles per request' }, 400);
+      }
+
+      const results = await Promise.all(handles.map(fetchBlastStatus));
+
+      return jsonResponse(handles.length === 1 ? results[0] : results);
+    } catch (err) {
+      return jsonResponse({ error: 'Worker error: ' + err.message }, 500);
     }
-
-    const handles = handleParam.split(',').map(h => h.trim()).filter(Boolean);
-    if (handles.length === 0) {
-      return jsonResponse({ error: 'No valid handles provided' }, 400);
-    }
-
-    if (handles.length > 20) {
-      return jsonResponse({ error: 'Max 20 handles per request' }, 400);
-    }
-
-    const results = await Promise.all(handles.map(fetchBlastStatus));
-
-    return jsonResponse(handles.length === 1 ? results[0] : results);
   }
 };
 
