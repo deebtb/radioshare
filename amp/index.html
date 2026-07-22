@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>AMP Show Archive</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8; color: #2d3748; min-height: 100vh;
+        }
+        header {
+            background: #1a365d; padding: 1.5rem 2rem; border-bottom: 3px solid #2c5282;
+            text-align: center;
+        }
+        header h1 { font-size: 1.75rem; color: #fff; margin-bottom: 0.5rem; }
+        header p { color: #bee3f8; font-size: 0.9rem; }
+        main { max-width: 800px; margin: 0 auto; padding: 2.5rem 1rem; }
+        .stats {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem; margin-bottom: 2.5rem;
+        }
+        .stat-card {
+            background: #fff; border-radius: 12px; padding: 1.25rem; text-align: center;
+            border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .stat-value { font-size: 1.75rem; font-weight: 700; color: #2b6cb0; }
+        .stat-label { font-size: 0.8rem; color: #718096; margin-top: 0.25rem; }
+        .nav-cards {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+        .nav-card {
+            background: #fff; border-radius: 12px; padding: 1.5rem; text-align: center;
+            border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            text-decoration: none; color: #2d3748; transition: all 0.2s;
+        }
+        .nav-card:hover {
+            transform: translateY(-3px); box-shadow: 0 6px 16px rgba(43,108,176,0.15);
+            border-color: #63b3ed;
+        }
+        .nav-card-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .nav-card-title { font-size: 1.1rem; font-weight: 700; color: #1a202c; margin-bottom: 0.4rem; }
+        .nav-card-desc { font-size: 0.85rem; color: #718096; }
+        .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #a0aec0; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AMP Show Archive</h1>
+        <p>142 shows broadcast on Amazon AMP &middot; April 2022 &ndash; March 2023</p>
+    </header>
+    <main>
+        <div class="stats">
+            <div class="stat-card"><span class="stat-value">142</span><div class="stat-label">Shows</div></div>
+            <div class="stat-card"><span class="stat-value">1,411</span><div class="stat-label">Unique Songs</div></div>
+            <div class="stat-card"><span class="stat-value">462</span><div class="stat-label">Artists</div></div>
+            <div class="stat-card"><span class="stat-value">~1 yr</span><div class="stat-label">Active</div></div>
+        </div>
+
+        <div class="nav-cards">
+            <a href="shows.html" class="nav-card">
+                <div class="nav-card-icon">📅</div>
+                <div class="nav-card-title">Shows by Date</div>
+                <div class="nav-card-desc">Browse all 142 shows chronologically. See title, date, and song count.</div>
+            </a>
+            <a href="songs.html" class="nav-card">
+                <div class="nav-card-icon">🔥</div>
+                <div class="nav-card-title">Songs by Popularity</div>
+                <div class="nav-card-desc">Most-played songs across all shows. See which tracks kept coming back.</div>
+            </a>
+            <a href="artists.html" class="nav-card">
+                <div class="nav-card-icon">🎸</div>
+                <div class="nav-card-title">Artists</div>
+                <div class="nav-card-desc">Artists ranked by appearances. See who dominated the rotation.</div>
+            </a>
+        </div>
+
+        <p class="footer">This is a personal archive &mdash; no playback, no licensing issues. Just a reference.</p>
+    </main>
+</body>
+</html>

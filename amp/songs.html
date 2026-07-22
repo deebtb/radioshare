@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Songs by Popularity - AMP Archive</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8; color: #2d3748; min-height: 100vh;
+        }
+        header {
+            background: #1a365d; padding: 1rem 1.5rem; border-bottom: 3px solid #2c5282;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+        }
+        header h1 { font-size: 1.4rem; color: #fff; }
+        .back-link { color: #bee3f8; text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid #63b3ed; }
+        .back-link:hover { color: #fff; }
+        main { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+        .search-bar {
+            margin-bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center;
+        }
+        #search {
+            flex: 1; max-width: 400px; padding: 0.6rem 1rem; border: 2px solid #e2e8f0;
+            border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+        }
+        #search:focus { border-color: #63b3ed; box-shadow: 0 0 0 3px rgba(99,179,237,0.3); }
+        .song-count { font-size: 0.8rem; color: #718096; }
+        .song-list {
+            background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;
+        }
+        .song-row {
+            display: flex; align-items: center; padding: 0.65rem 1.25rem; gap: 1rem;
+            border-bottom: 1px solid #f7fafc;
+        }
+        .song-row:last-child { border-bottom: none; }
+        .song-row:hover { background: #f7fafc; }
+        .song-rank {
+            font-size: 0.8rem; color: #a0aec0; font-weight: 600; min-width: 2rem; text-align: right;
+        }
+        .song-info { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+        .song-name { font-size: 0.95rem; font-weight: 600; color: #1a202c; }
+        .song-artist { font-size: 0.8rem; color: #718096; }
+        .song-plays {
+            background: #fefcbf; color: #975a16; padding: 0.25rem 0.6rem;
+            border-radius: 10px; font-size: 0.7rem; font-weight: 600; white-space: nowrap;
+        }
+        .no-results { text-align: center; padding: 2rem; color: #718096; }
+        @media (max-width: 600px) {
+            header { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔥 Songs by Popularity</h1>
+        <a href="index.html" class="back-link">&larr; Back to Archive</a>
+    </header>
+    <main>
+        <div class="search-bar">
+            <input type="text" id="search" placeholder="Filter by song or artist..." aria-label="Filter songs">
+            <span class="song-count" id="song-count"></span>
+        </div>
+        <div class="song-list" id="song-list">
+            <p class="no-results">Loading...</p>
+        </div>
+    </main>
+
+    <script>
+        const listEl = document.getElementById('song-list');
+        const searchInput = document.getElementById('search');
+        const songCount = document.getElementById('song-count');
+
+        let songs = []; // {song, artist, plays}
+
+        function parseCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') { inQuotes = !inQuotes; }
+                    else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else { current += char; }
+                }
+                fields.push(current.trim());
+                rows.push({ song: fields[4], artist: fields[5], artistSong: fields[6] });
+            }
+            return rows;
+        }
+
+        function buildSongRanking(rows) {
+            const map = {};
+            rows.forEach(r => {
+                const key = r.artistSong;
+                if (!key) return;
+                if (!map[key]) map[key] = { song: r.song, artist: r.artist, plays: 0 };
+                map[key].plays++;
+            });
+            return Object.values(map).sort((a, b) => b.plays - a.plays || a.song.localeCompare(b.song));
+        }
+
+        function escHtml(s) {
+            return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function render() {
+            const query = searchInput.value.toLowerCase();
+            const filtered = songs.filter(s =>
+                s.song.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query)
+            );
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<p class="no-results">No songs match your filter.</p>';
+                songCount.textContent = '0 songs';
+                return;
+            }
+
+            songCount.textContent = `${filtered.length} song${filtered.length !== 1 ? 's' : ''}`;
+
+            let html = '';
+            filtered.forEach((s, i) => {
+                const rank = songs.indexOf(s) + 1;
+                html += `
+                    <div class="song-row">
+                        <span class="song-rank">${rank}</span>
+                        <div class="song-info">
+                            <span class="song-name">${escHtml(s.song)}</span>
+                            <span class="song-artist">${escHtml(s.artist)}</span>
+                        </div>
+                        <span class="song-plays">${s.plays}x</span>
+                    </div>
+                `;
+            });
+            listEl.innerHTML = html;
+        }
+
+        searchInput.addEventListener('input', render);
+
+        fetch('amp-playlists.csv')
+            .then(r => r.text())
+            .then(text => {
+                const rows = parseCSV(text);
+                songs = buildSongRanking(rows);
+                render();
+            })
+            .catch(err => {
+                listEl.innerHTML = '<p class="no-results">Failed to load data.</p>';
+                console.error(err);
+            });
+    </script>
+</body>
+</html>

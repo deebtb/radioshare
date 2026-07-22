@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Radio Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2b6cb0;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex: 1;
+            max-width: 450px;
+        }
+
+        #search {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #bee3f8;
+            border-radius: 8px;
+            background: #fff;
+            color: #2d3748;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #search::placeholder {
+            color: #a0aec0;
+        }
+
+        #search:focus {
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.3);
+        }
+
+        .random-btn, .share-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+
+        .random-btn {
+            font-size: 2rem;
+            background: #fbd38d;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+        }
+
+        .random-btn:hover, .share-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .random-btn:hover {
+            transform: scale(1.2) rotate(15deg);
+            background: #f6e05e;
+        }
+
+        .share-btn.copied {
+            animation: pulse 0.5s ease;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .share-toast {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2b6cb0;
+            border: 1px solid #2c5282;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .share-toast.visible {
+            opacity: 1;
+        }
+
+        .station-count {
+            font-size: 0.8rem;
+            color: #bee3f8;
+            white-space: nowrap;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-header .section-title {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .refresh-meta-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+            padding: 0.25rem;
+        }
+
+        .refresh-meta-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .favorites-section {
+            margin-bottom: 2rem;
+        }
+
+        .favorites-section.hidden {
+            display: none;
+        }
+
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .station-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.4rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            min-height: 70px;
+        }
+
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.15);
+            border-color: #63b3ed;
+        }
+
+        .station-card.playing {
+            border-color: #276749;
+            background: #f0fff4;
+            box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
+        }
+
+        .station-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a202c;
+            padding-right: 3.5rem;
+        }
+
+        .station-track {
+            font-size: 0.8rem;
+            color: #2b6cb0;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 1.1em;
+            padding-right: 3.5rem;
+        }
+
+        .fav-btn {
+            position: absolute;
+            top: 50%;
+            right: 2.25rem;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+            color: #a0aec0;
+        }
+
+        .fav-btn:hover {
+            transform: translateY(-50%) scale(1.2);
+            color: #d69e2e;
+        }
+
+        .fav-btn.favorited {
+            color: #d69e2e;
+        }
+
+        .hide-btn {
+            position: absolute;
+            top: 50%;
+            right: 0.75rem;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+            opacity: 0.35;
+        }
+
+        .hide-btn:hover {
+            transform: translateY(-50%) scale(1.2);
+            opacity: 0.9;
+        }
+
+        .restore-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: none;
+            color: #718096;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .restore-btn:hover {
+            color: #2d3748;
+            border-color: #2b6cb0;
+        }
+
+        .restore-btn.hidden {
+            display: none;
+        }
+
+        .now-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a365d;
+            border-top: 3px solid #2b6cb0;
+            padding: 1rem 2rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .now-playing.visible {
+            display: flex;
+        }
+
+        .now-playing-fav {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+            margin-left: auto;
+            flex-shrink: 0;
+            color: #a0aec0;
+        }
+
+        .now-playing-fav:hover {
+            transform: scale(1.2);
+            color: #d69e2e;
+        }
+
+        .now-playing-fav.favorited {
+            color: #d69e2e;
+        }
+
+        .now-playing-station {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 1rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .now-playing-track {
+            color: #fbd38d;
+            font-size: 1.4rem;
+            font-weight: 600;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .now-playing-track.scrolling {
+            text-overflow: clip;
+            animation: marquee 12s linear infinite;
+        }
+
+        @keyframes marquee {
+            0%   { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .stop-btn {
+            padding: 0.5rem 1rem;
+            background: #c53030;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stop-btn:hover {
+            background: #9b2c2c;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 600px) {
+            .stations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            header h1 {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .search-container {
+                max-width: 100%;
+            }
+
+            .now-playing {
+                flex-wrap: wrap;
+                padding: 0.75rem 1rem;
+            }
+
+            .now-playing-track {
+                font-size: 1.1rem;
+            }
+        }
+
+        body.has-player main {
+            padding-bottom: 6rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📻 Radio Online</h1>
+        <div class="search-container">
+            <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
+            <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
+            <button class="share-btn" id="share-btn" aria-label="Share preferences as URL" title="Share preferences link">🔗</button>
+        </div>
+        <span class="station-count" id="station-count"></span>
+    </header>
+
+    <div class="share-toast" id="share-toast">Link copied to clipboard!</div>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Exclusive Radio</span>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8; transition: background 0.2s;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8; transition: background 0.2s;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8; transition: background 0.2s;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8; transition: background 0.2s;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8; transition: background 0.2s;">Blast Radio</a>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8; transition: background 0.2s;">Music by Year</a>
+        </nav>
+        <section class="favorites-section hidden" id="favorites-section">
+            <div class="section-header">
+                <h2 class="section-title">⭐ Favorites</h2>
+                <button class="refresh-meta-btn" id="refresh-meta-btn" aria-label="Refresh now playing on favorites" title="Refresh now playing">🎹</button>
+            </div>
+            <div class="stations-grid" id="favorites-grid"></div>
+        </section>
+
+        <section>
+            <h2 class="section-title">All Stations</h2>
+            <div class="stations-grid" id="stations-grid"></div>
+            <div class="no-results" id="no-results" hidden>No stations found.</div>
+            <button class="restore-btn hidden" id="restore-btn">Restore hidden channels</button>
+        </section>
+    </main>
+
+    <div class="now-playing" id="now-playing">
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-track" id="now-playing-track"></span>
+        <button class="now-playing-fav" id="now-playing-fav" aria-label="Favorite current station" title="Favorite this station">☆</button>
+    </div>
+
+    <script src="tracker.js"></script>
+    <script>
+        const grid = document.getElementById('stations-grid');
+        const favGrid = document.getElementById('favorites-grid');
+        const favSection = document.getElementById('favorites-section');
+        const searchInput = document.getElementById('search');
+        const stationCount = document.getElementById('station-count');
+        const noResults = document.getElementById('no-results');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingTrack = document.getElementById('now-playing-track');
+        const stopBtn = document.getElementById('stop-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const shareToast = document.getElementById('share-toast');
+        const nowPlayingFav = document.getElementById('now-playing-fav');
+
+        let stations = [];
+        let audio = null;
+        let currentStation = null;
+        let currentStationName = '';
+        let favorites = JSON.parse(localStorage.getItem('radioFavorites') || '[]');
+        let hiddenStations = JSON.parse(localStorage.getItem('radioHidden') || '[]');
+        let metadataController = null;
+        const restoreBtn = document.getElementById('restore-btn');
+
+        // --- Bitset URL encoding/decoding ---
+
+        function toBase64Url(bytes) {
+            let bin = '';
+            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+            let b64 = btoa(bin);
+            return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function fromBase64Url(s) {
+            s = s.replace(/-/g, '+').replace(/_/g, '/');
+            while (s.length % 4) s += '=';
+            let bin = atob(s);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+        }
+
+        function encodeBitset(total, indices) {
+            const bytes = new Uint8Array(Math.ceil(total / 8));
+            for (const i of indices) {
+                if (i >= 0 && i < total) {
+                    bytes[Math.floor(i / 8)] |= 1 << (i % 8);
+                }
+            }
+            return toBase64Url(bytes);
+        }
+
+        function decodeBitset(total, s) {
+            const bytes = fromBase64Url(s);
+            const res = [];
+            for (let i = 0; i < total; i++) {
+                if (i < bytes.length * 8 && (bytes[Math.floor(i / 8)] & (1 << (i % 8)))) {
+                    res.push(i);
+                }
+            }
+            return res;
+        }
+
+        function urlsToIndices(urls) {
+            return urls
+                .map(url => stations.findIndex(s => s.url === url))
+                .filter(i => i >= 0);
+        }
+
+        function indicesToUrls(indices) {
+            return indices
+                .filter(i => i >= 0 && i < stations.length)
+                .map(i => stations[i].url);
+        }
+
+        function generateShareUrl() {
+            const favIndices = urlsToIndices(favorites);
+            const hidIndices = urlsToIndices(hiddenStations);
+            const total = stations.length;
+
+            let hash = '';
+            if (favIndices.length > 0) {
+                hash += 'f=' + encodeBitset(total, favIndices);
+            }
+            if (hidIndices.length > 0) {
+                if (hash) hash += '&';
+                hash += 'h=' + encodeBitset(total, hidIndices);
+            }
+
+            const base = window.location.origin + window.location.pathname;
+            return hash ? base + '#' + hash : base;
+        }
+
+        function loadFromUrl() {
+            const hash = window.location.hash.slice(1);
+            if (!hash) return false;
+
+            const params = {};
+            hash.split('&').forEach(part => {
+                const [key, val] = part.split('=');
+                if (key && val) params[key] = val;
+            });
+
+            let loaded = false;
+            const total = stations.length;
+
+            if (params.f) {
+                const favIndices = decodeBitset(total, params.f);
+                favorites = indicesToUrls(favIndices);
+                saveFavorites();
+                loaded = true;
+            }
+
+            if (params.h) {
+                const hidIndices = decodeBitset(total, params.h);
+                hiddenStations = indicesToUrls(hidIndices);
+                saveHidden();
+                loaded = true;
+            }
+
+            return loaded;
+        }
+
+        function showToast(message) {
+            shareToast.textContent = message;
+            shareToast.classList.add('visible');
+            setTimeout(() => shareToast.classList.remove('visible'), 2500);
+        }
+
+        // --- End bitset ---
+
+        function saveFavorites() {
+            localStorage.setItem('radioFavorites', JSON.stringify(favorites));
+        }
+
+        function saveHidden() {
+            localStorage.setItem('radioHidden', JSON.stringify(hiddenStations));
+        }
+
+        function isHidden(url) {
+            return hiddenStations.includes(url);
+        }
+
+        function hideStation(url) {
+            if (!isHidden(url)) {
+                hiddenStations.push(url);
+                saveHidden();
+            }
+            render();
+        }
+
+        function restoreAllHidden() {
+            hiddenStations = [];
+            saveHidden();
+            render();
+        }
+
+        function isFavorite(url) {
+            return favorites.includes(url);
+        }
+
+        function toggleFavorite(url) {
+            if (isFavorite(url)) {
+                favorites = favorites.filter(f => f !== url);
+            } else {
+                favorites.push(url);
+            }
+            saveFavorites();
+            render();
+            refreshFavoritesMetadata();
+        }
+
+        function updateNowPlayingFav() {
+            if (!currentStation) return;
+            const fav = isFavorite(currentStation);
+            nowPlayingFav.textContent = fav ? '★' : '☆';
+            nowPlayingFav.classList.toggle('favorited', fav);
+        }
+
+        function parseCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const result = [];
+            for (let i = 2; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                fields.push(current.trim());
+
+                const name = fields[1];
+                const url = fields[2];
+
+                if (name && url && url.startsWith('http')) {
+                    result.push({ name, url });
+                }
+            }
+            return result;
+        }
+
+        // ICY metadata reader
+        function startMetadataReader(url) {
+            if (metadataController) {
+                metadataController.abort();
+            }
+            metadataController = new AbortController();
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: metadataController.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) return;
+
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let needLengthByte = false;
+
+                function processChunk({ done, value }) {
+                    if (done) return;
+
+                    let offset = 0;
+                    while (offset < value.length) {
+                        if (needLengthByte) {
+                            // First byte of this chunk is the metadata length
+                            const metaLength = value[offset] * 16;
+                            offset++;
+                            needLengthByte = false;
+                            if (metaLength > 0) {
+                                metaBuffer = [];
+                                metaBytesRemaining = metaLength;
+                            } else {
+                                bytesUntilMeta = metaint;
+                            }
+                        } else if (metaBuffer !== null) {
+                            // Reading metadata content
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    nowPlayingTrack.textContent = match[1];
+                                    checkTrackOverflow();
+                                    updateMediaSession(currentStationName, match[1]);
+                                }
+                                metaBuffer = null;
+                                bytesUntilMeta = metaint;
+                            }
+                        } else {
+                            // Reading audio data, counting down to metadata
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) {
+                                        metaBuffer = [];
+                                        metaBytesRemaining = metaLength;
+                                    } else {
+                                        bytesUntilMeta = metaint;
+                                    }
+                                } else {
+                                    // Length byte will be first byte of next chunk
+                                    needLengthByte = true;
+                                }
+                            }
+                        }
+                    }
+
+                    reader.read().then(processChunk).catch(() => {});
+                }
+
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function concatUint8Arrays(arrays) {
+            const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const arr of arrays) {
+                result.set(arr, offset);
+                offset += arr.length;
+            }
+            return result;
+        }
+
+        function stopMetadataReader() {
+            if (metadataController) {
+                metadataController.abort();
+                metadataController = null;
+            }
+        }
+
+        function checkTrackOverflow() {
+            const el = nowPlayingTrack;
+            if (el.scrollWidth > el.clientWidth) {
+                el.classList.add('scrolling');
+            } else {
+                el.classList.remove('scrolling');
+            }
+        }
+
+        // --- Media Session API ---
+        function updateMediaSession(stationName, trackTitle) {
+            if (!('mediaSession' in navigator)) return;
+
+            let title = trackTitle || stationName;
+            let artist = trackTitle ? stationName : 'Radio Stations Online';
+
+            // If track is "Artist - Song", split it
+            if (trackTitle && trackTitle.includes(' - ')) {
+                const parts = trackTitle.split(' - ');
+                artist = parts[0];
+                title = parts.slice(1).join(' - ');
+            }
+
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: title,
+                artist: artist,
+                album: 'Radio Stations Online',
+                artwork: [
+                    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">📻</text></svg>', sizes: '100x100', type: 'image/svg+xml' }
+                ]
+            });
+
+            navigator.mediaSession.playbackState = 'playing';
+        }
+
+        function setupMediaSessionActions() {
+            if (!('mediaSession' in navigator)) return;
+
+            navigator.mediaSession.setActionHandler('stop', () => {
+                stopBtn.click();
+            });
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                if (audio) audio.pause();
+                navigator.mediaSession.playbackState = 'paused';
+            });
+
+            navigator.mediaSession.setActionHandler('play', () => {
+                if (audio) audio.play();
+                navigator.mediaSession.playbackState = 'playing';
+            });
+
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                // Play random from visible stations
+                const visible = getFiltered();
+                if (visible.length === 0) return;
+                const randomStation = visible[Math.floor(Math.random() * visible.length)];
+                playStation(randomStation);
+            });
+        }
+
+        setupMediaSessionActions();
+        // --- End Media Session API ---
+
+        // --- Favorites metadata peek ---
+        let favTrackInfo = {}; // url -> track title
+        let peekControllers = [];
+
+        function peekStationMetadata(url) {
+            const controller = new AbortController();
+            peekControllers.push(controller);
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: controller.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) { controller.abort(); return; }
+
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let waitingForLength = true;
+                let found = false;
+
+                function processChunk({ done, value }) {
+                    if (done || found) return;
+
+                    let offset = 0;
+                    while (offset < value.length && !found) {
+                        if (metaBuffer !== null) {
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    const title = match[1];
+                                    const song = title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title;
+                                    favTrackInfo[url] = song;
+                                    updateFavTrackDisplay(url, song);
+                                }
+                                found = true;
+                                controller.abort();
+                                return;
+                            }
+                        } else if (!waitingForLength) {
+                            break;
+                        } else {
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) {
+                                        metaBuffer = [];
+                                        metaBytesRemaining = metaLength;
+                                        waitingForLength = false;
+                                    } else {
+                                        bytesUntilMeta = metaint;
+                                    }
+                                } else {
+                                    waitingForLength = false;
+                                    metaBuffer = null;
+                                    metaBytesRemaining = -1;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!found) {
+                        reader.read().then(processChunk).catch(() => {});
+                    }
+                }
+
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function updateFavTrackDisplay(url, track) {
+            document.querySelectorAll(`[data-track-url="${CSS.escape(url)}"]`).forEach(el => {
+                el.textContent = track;
+            });
+        }
+
+        function refreshFavoritesMetadata() {
+            // Abort any existing peeks
+            peekControllers.forEach(c => c.abort());
+            peekControllers = [];
+            favTrackInfo = {};
+
+            const favStations = stations.filter(s => isFavorite(s.url) && !isHidden(s.url));
+            const toPeek = favStations.slice(0, 10);
+
+            toPeek.forEach((station, i) => {
+                // Stagger requests by 200ms each
+                setTimeout(() => peekStationMetadata(station.url), i * 200);
+            });
+        }
+        // --- End favorites metadata peek ---
+
+        function createCard(station, showTrack) {
+            const card = document.createElement('div');
+            card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
+            card.style.cursor = 'pointer';
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', `Play ${station.name}`);
+            card.addEventListener('click', () => playStation(station));
+
+            const favBtn = document.createElement('button');
+            favBtn.className = 'fav-btn' + (isFavorite(station.url) ? ' favorited' : '');
+            favBtn.textContent = isFavorite(station.url) ? '★' : '☆';
+            favBtn.setAttribute('aria-label', isFavorite(station.url) ? `Remove ${station.name} from favorites` : `Add ${station.name} to favorites`);
+            favBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(station.url);
+            });
+
+            const hideBtn = document.createElement('button');
+            hideBtn.className = 'hide-btn';
+            hideBtn.textContent = '🚫';
+            hideBtn.setAttribute('aria-label', `Hide ${station.name}`);
+            hideBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideStation(station.url);
+            });
+
+            const name = document.createElement('span');
+            name.className = 'station-name';
+            name.textContent = station.name;
+
+            card.appendChild(favBtn);
+            card.appendChild(hideBtn);
+            card.appendChild(name);
+
+            if (showTrack) {
+                const track = document.createElement('span');
+                track.className = 'station-track';
+                track.setAttribute('data-track-url', station.url);
+                track.textContent = favTrackInfo[station.url] || '';
+                card.appendChild(track);
+            }
+
+            return card;
+        }
+
+        function render() {
+            const filtered = getFiltered();
+
+            // Favorites section (also exclude hidden)
+            const favStations = stations.filter(s => isFavorite(s.url) && !isHidden(s.url));
+            const filteredFavs = favStations.filter(s => {
+                const query = searchInput.value.toLowerCase();
+                return s.name.toLowerCase().includes(query);
+            });
+
+            if (filteredFavs.length > 0) {
+                favSection.classList.remove('hidden');
+                favGrid.innerHTML = '';
+                filteredFavs.forEach(station => {
+                    favGrid.appendChild(createCard(station, true));
+                });
+            } else {
+                favSection.classList.add('hidden');
+            }
+
+            // All stations
+            grid.innerHTML = '';
+            if (filtered.length === 0) {
+                noResults.hidden = false;
+                stationCount.textContent = '0 stations';
+            } else {
+                noResults.hidden = true;
+                stationCount.textContent = `${filtered.length} station${filtered.length !== 1 ? 's' : ''}`;
+                filtered.forEach(station => {
+                    grid.appendChild(createCard(station, false));
+                });
+            }
+
+            // Restore button
+            if (hiddenStations.length > 0) {
+                restoreBtn.classList.remove('hidden');
+                restoreBtn.textContent = `Restore ${hiddenStations.length} hidden channel${hiddenStations.length !== 1 ? 's' : ''}`;
+            } else {
+                restoreBtn.classList.add('hidden');
+            }
+        }
+
+        function playStation(station) {
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+            stopMetadataReader();
+
+            if (currentStation === station.url) {
+                currentStation = null;
+                currentStationName = '';
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+                return;
+            }
+
+            audio = new Audio(station.url);
+            audio.play().catch(() => {
+                alert('Unable to play this stream. It may be offline.');
+                currentStation = null;
+                currentStationName = '';
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+            });
+
+            startMetadataReader(station.url);
+
+            currentStation = station.url;
+            currentStationName = station.name;
+            trackPlay(station.name, 'exclusive-radio');
+            nowPlayingStation.textContent = `🎵 ${station.name}`;
+            nowPlayingTrack.textContent = 'Loading track info...';
+            updateNowPlayingFav();
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            updateMediaSession(station.name, '');
+            render();
+            refreshFavoritesMetadata();
+        }
+
+        function getFiltered() {
+            const query = searchInput.value.toLowerCase();
+            return stations.filter(s => !isHidden(s.url) && s.name.toLowerCase().includes(query));
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+            stopMetadataReader();
+            currentStation = null;
+            currentStationName = '';
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            render();
+        });
+
+        restoreBtn.addEventListener('click', () => {
+            restoreAllHidden();
+        });
+
+        document.getElementById('random-btn').addEventListener('click', () => {
+            const visible = getFiltered();
+            if (visible.length === 0) return;
+            const randomStation = visible[Math.floor(Math.random() * visible.length)];
+            playStation(randomStation);
+        });
+
+        document.getElementById('refresh-meta-btn').addEventListener('click', () => {
+            refreshFavoritesMetadata();
+        });
+
+        shareBtn.addEventListener('click', () => {
+            const url = generateShareUrl();
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Link copied to clipboard!');
+                shareBtn.classList.add('copied');
+                setTimeout(() => shareBtn.classList.remove('copied'), 500);
+            }).catch(() => {
+                // Fallback: update the URL bar
+                window.history.replaceState(null, '', url);
+                showToast('URL updated — copy from address bar');
+            });
+        });
+
+        nowPlayingFav.addEventListener('click', () => {
+            if (!currentStation) return;
+            toggleFavorite(currentStation);
+            updateNowPlayingFav();
+        });
+
+        searchInput.addEventListener('input', () => {
+            render();
+        });
+
+        // Load CSV, then check URL for shared prefs
+        fetch('streams/exclusive-radio.csv')
+            .then(res => res.text())
+            .then(text => {
+                stations = parseCSV(text);
+
+                // If URL has shared preferences, apply them (overrides localStorage)
+                if (window.location.hash.length > 1) {
+                    loadFromUrl();
+                }
+
+                render();
+                refreshFavoritesMetadata();
+            })
+            .catch(err => {
+                grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
+                console.error(err);
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Exclusive Guest Picks</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2b6cb0;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex: 1;
+            max-width: 450px;
+        }
+
+        #search {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #bee3f8;
+            border-radius: 8px;
+            background: #fff;
+            color: #2d3748;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #search::placeholder {
+            color: #a0aec0;
+        }
+
+        #search:focus {
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.3);
+        }
+
+        .random-btn {
+            font-size: 2rem;
+            background: #fbd38d;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+
+        .random-btn:hover {
+            transform: scale(1.2) rotate(15deg);
+            background: #f6e05e;
+        }
+
+        .station-count {
+            font-size: 0.8rem;
+            color: #bee3f8;
+            white-space: nowrap;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-header .section-title {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .refresh-meta-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+            padding: 0.25rem;
+        }
+
+        .refresh-meta-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .guest-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .guest-btn {
+            padding: 0.6rem 1.2rem;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #2d3748;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .guest-btn:hover {
+            border-color: #63b3ed;
+            background: #ebf8ff;
+        }
+
+        .guest-btn.active {
+            background: #2b6cb0;
+            color: #fff;
+            border-color: #2b6cb0;
+        }
+
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .station-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.4rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            min-height: 70px;
+        }
+
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.15);
+            border-color: #63b3ed;
+        }
+
+        .station-card.playing {
+            border-color: #276749;
+            background: #f0fff4;
+            box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
+        }
+
+        .station-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a202c;
+            padding-right: 2.5rem;
+        }
+
+        .station-track {
+            font-size: 0.8rem;
+            color: #2b6cb0;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 1.1em;
+            padding-right: 2.5rem;
+        }
+
+        .fav-btn {
+            position: absolute;
+            top: 50%;
+            right: 0.75rem;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+            color: #d69e2e;
+        }
+
+        .fav-btn:hover {
+            transform: translateY(-50%) scale(1.2);
+        }
+
+
+
+        .play-btn.active {
+            background: #276749;
+        }
+
+        .now-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a365d;
+            border-top: 3px solid #2b6cb0;
+            padding: 1rem 2rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .now-playing.visible {
+            display: flex;
+        }
+
+        .now-playing-station {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 1rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .now-playing-track {
+            color: #fbd38d;
+            font-size: 1.4rem;
+            font-weight: 600;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .now-playing-track.scrolling {
+            text-overflow: clip;
+            animation: marquee 12s linear infinite;
+        }
+
+        @keyframes marquee {
+            0%   { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .stop-btn {
+            padding: 0.5rem 1rem;
+            background: #c53030;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stop-btn:hover {
+            background: #9b2c2c;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 600px) {
+            .stations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            header h1 {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .search-container {
+                max-width: 100%;
+            }
+
+            .now-playing {
+                flex-wrap: wrap;
+                padding: 0.75rem 1rem;
+            }
+
+            .now-playing-track {
+                font-size: 1.1rem;
+            }
+        }
+
+        body.has-player main {
+            padding-bottom: 6rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎧 Exclusive Guest Picks</h1>
+        <div class="search-container">
+            <input type="text" id="search" placeholder="Search stations..." aria-label="Search radio stations">
+            <button class="random-btn" id="random-btn" aria-label="Play random station" title="Play random station">🎲</button>
+        </div>
+        <span class="station-count" id="station-count"></span>
+    </header>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Exclusive Guest Picks</span>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
+        </nav>
+
+        <div class="guest-picker" id="guest-picker"></div>
+
+        <section>
+            <div class="section-header">
+                <h2 class="section-title" id="section-title">Select a guest list above</h2>
+                <button class="refresh-meta-btn" id="refresh-meta-btn" aria-label="Refresh now playing" title="Refresh now playing" hidden>🎹</button>
+            </div>
+            <div class="stations-grid" id="stations-grid"></div>
+            <div class="no-results" id="no-results" hidden>No stations found.</div>
+        </section>
+    </main>
+
+    <div class="now-playing" id="now-playing">
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-track" id="now-playing-track"></span>
+    </div>
+
+    <script src="tracker.js"></script>
+    <script>
+        const grid = document.getElementById('stations-grid');
+        const searchInput = document.getElementById('search');
+        const stationCount = document.getElementById('station-count');
+        const noResults = document.getElementById('no-results');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingTrack = document.getElementById('now-playing-track');
+        const stopBtn = document.getElementById('stop-btn');
+        const guestPicker = document.getElementById('guest-picker');
+        const sectionTitle = document.getElementById('section-title');
+        const refreshMetaBtn = document.getElementById('refresh-meta-btn');
+
+        let stations = [];
+        let guestLists = []; // {label, favIndices, hidIndices}
+        let activeGuest = null;
+        let audio = null;
+        let currentStation = null;
+        let currentStationName = '';
+        let metadataController = null;
+        let favTrackInfo = {};
+        let peekControllers = [];
+
+        // --- Bitset URL decoding ---
+        function fromBase64Url(s) {
+            s = s.replace(/-/g, '+').replace(/_/g, '/');
+            while (s.length % 4) s += '=';
+            let bin = atob(s);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes;
+        }
+
+        function decodeBitset(total, s) {
+            const bytes = fromBase64Url(s);
+            const res = [];
+            for (let i = 0; i < total; i++) {
+                if (i < bytes.length * 8 && (bytes[Math.floor(i / 8)] & (1 << (i % 8)))) {
+                    res.push(i);
+                }
+            }
+            return res;
+        }
+
+        function parseBookmarkUrl(url) {
+            const hashIdx = url.indexOf('#');
+            if (hashIdx === -1) return { favIndices: [], hidIndices: [] };
+            const hash = url.slice(hashIdx + 1);
+            const params = {};
+            hash.split('&').forEach(part => {
+                const [key, val] = part.split('=');
+                if (key && val) params[key] = val;
+            });
+            const total = stations.length;
+            const favIndices = params.f ? decodeBitset(total, params.f) : [];
+            const hidIndices = params.h ? decodeBitset(total, params.h) : [];
+            return { favIndices, hidIndices };
+        }
+
+        // --- CSV parsers ---
+        function parseStationsCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const result = [];
+            for (let i = 2; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') { inQuotes = !inQuotes; }
+                    else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else { current += char; }
+                }
+                fields.push(current.trim());
+                const name = fields[1];
+                const url = fields[2];
+                if (name && url && url.startsWith('http')) {
+                    result.push({ name, url });
+                }
+            }
+            return result;
+        }
+
+        function parseGuestCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') { inQuotes = !inQuotes; }
+                    else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else { current += char; }
+                }
+                fields.push(current.trim());
+                const label = fields[0];
+                const url = fields[1];
+                if (label && url) {
+                    result.push({ label, url });
+                }
+            }
+            return result;
+        }
+
+        // --- ICY metadata reader ---
+        function startMetadataReader(url) {
+            if (metadataController) metadataController.abort();
+            metadataController = new AbortController();
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: metadataController.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) return;
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let needLengthByte = false;
+
+                function processChunk({ done, value }) {
+                    if (done) return;
+                    let offset = 0;
+                    while (offset < value.length) {
+                        if (needLengthByte) {
+                            const metaLength = value[offset] * 16;
+                            offset++;
+                            needLengthByte = false;
+                            if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                            else { bytesUntilMeta = metaint; }
+                        } else if (metaBuffer !== null) {
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    nowPlayingTrack.textContent = match[1];
+                                    checkTrackOverflow();
+                                    updateMediaSession(currentStationName, match[1]);
+                                }
+                                metaBuffer = null;
+                                bytesUntilMeta = metaint;
+                            }
+                        } else {
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                                    else { bytesUntilMeta = metaint; }
+                                } else { needLengthByte = true; }
+                            }
+                        }
+                    }
+                    reader.read().then(processChunk).catch(() => {});
+                }
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function concatUint8Arrays(arrays) {
+            const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const arr of arrays) { result.set(arr, offset); offset += arr.length; }
+            return result;
+        }
+
+        function stopMetadataReader() {
+            if (metadataController) { metadataController.abort(); metadataController = null; }
+        }
+
+        function checkTrackOverflow() {
+            const el = nowPlayingTrack;
+            if (el.scrollWidth > el.clientWidth) {
+                el.classList.add('scrolling');
+            } else {
+                el.classList.remove('scrolling');
+            }
+        }
+
+        function updateMediaSession(stationName, trackTitle) {
+            if (!('mediaSession' in navigator)) return;
+            let title = trackTitle || stationName;
+            let artist = trackTitle ? stationName : 'Exclusive Guest Picks';
+            if (trackTitle && trackTitle.includes(' - ')) {
+                const parts = trackTitle.split(' - ');
+                artist = parts[0];
+                title = parts.slice(1).join(' - ');
+            }
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title, artist, album: 'Exclusive Guest Picks',
+                artwork: [{ src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🎧</text></svg>', sizes: '100x100', type: 'image/svg+xml' }]
+            });
+            navigator.mediaSession.playbackState = 'playing';
+        }
+
+        // --- Favorites metadata peek ---
+        function peekStationMetadata(url) {
+            const controller = new AbortController();
+            peekControllers.push(controller);
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: controller.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) { controller.abort(); return; }
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let found = false;
+
+                function processChunk({ done, value }) {
+                    if (done || found) return;
+                    let offset = 0;
+                    while (offset < value.length && !found) {
+                        if (metaBuffer !== null) {
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    const title = match[1];
+                                    const song = title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title;
+                                    favTrackInfo[url] = song;
+                                    updateTrackDisplay(url, song);
+                                }
+                                found = true;
+                                controller.abort();
+                                return;
+                            }
+                        } else {
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                                    else { bytesUntilMeta = metaint; }
+                                }
+                            }
+                        }
+                    }
+                    if (!found) reader.read().then(processChunk).catch(() => {});
+                }
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function updateTrackDisplay(url, track) {
+            document.querySelectorAll(`[data-track-url="${CSS.escape(url)}"]`).forEach(el => {
+                el.textContent = track;
+            });
+        }
+
+        function refreshMetadata() {
+            peekControllers.forEach(c => c.abort());
+            peekControllers = [];
+            favTrackInfo = {};
+            const { favs, others } = getFilteredStations();
+            const visible = [...favs, ...others];
+            const toPeek = visible.slice(0, 10);
+            toPeek.forEach((station, i) => {
+                setTimeout(() => peekStationMetadata(station.url), i * 200);
+            });
+        }
+
+        // --- Core rendering ---
+        function getFilteredStations() {
+            if (activeGuest === null) return { favs: [], others: [] };
+            const guest = guestLists[activeGuest];
+            const query = searchInput.value.toLowerCase();
+            const hidSet = new Set(guest.hidIndices);
+            const favSet = new Set(guest.favIndices);
+
+            const favs = [];
+            const others = [];
+
+            for (let i = 0; i < stations.length; i++) {
+                if (hidSet.has(i)) continue;
+                const s = stations[i];
+                if (!s.name.toLowerCase().includes(query)) continue;
+                if (favSet.has(i)) {
+                    favs.push(s);
+                } else {
+                    others.push(s);
+                }
+            }
+            return { favs, others };
+        }
+
+        function createCard(station, isFav) {
+            const card = document.createElement('div');
+            card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
+            card.style.cursor = 'pointer';
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', `Play ${station.name}`);
+            card.addEventListener('click', () => playStation(station));
+
+            if (isFav) {
+                const favBtn = document.createElement('button');
+                favBtn.className = 'fav-btn';
+                favBtn.textContent = '★';
+                favBtn.setAttribute('aria-label', `${station.name} - bookmarked`);
+                favBtn.style.cursor = 'default';
+                favBtn.addEventListener('click', (e) => e.stopPropagation());
+                card.appendChild(favBtn);
+            }
+
+            const name = document.createElement('span');
+            name.className = 'station-name';
+            name.textContent = station.name;
+
+            const track = document.createElement('span');
+            track.className = 'station-track';
+            track.setAttribute('data-track-url', station.url);
+            track.textContent = favTrackInfo[station.url] || '';
+
+            card.appendChild(name);
+            card.appendChild(track);
+            return card;
+        }
+
+        function render() {
+            grid.innerHTML = '';
+
+            if (activeGuest === null) {
+                noResults.hidden = true;
+                stationCount.textContent = '';
+                return;
+            }
+
+            const { favs, others } = getFilteredStations();
+            const total = favs.length + others.length;
+
+            if (total === 0) {
+                noResults.hidden = false;
+                stationCount.textContent = '0 stations';
+            } else {
+                noResults.hidden = true;
+                stationCount.textContent = `${total} station${total !== 1 ? 's' : ''}`;
+                favs.forEach(station => {
+                    grid.appendChild(createCard(station, true));
+                });
+                others.forEach(station => {
+                    grid.appendChild(createCard(station, false));
+                });
+            }
+        }
+
+        function selectGuest(index) {
+            if (activeGuest === index) return;
+            activeGuest = index;
+            const guest = guestLists[index];
+            sectionTitle.textContent = `🎧 ${guest.label}`;
+            refreshMetaBtn.hidden = false;
+            renderGuestButtons();
+            render();
+            refreshMetadata();
+        }
+
+        function renderGuestButtons() {
+            guestPicker.innerHTML = '';
+            guestLists.forEach((guest, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'guest-btn' + (activeGuest === idx ? ' active' : '');
+                btn.textContent = guest.label;
+                btn.addEventListener('click', () => selectGuest(idx));
+                guestPicker.appendChild(btn);
+            });
+        }
+
+        function playStation(station) {
+            if (audio) { audio.pause(); audio = null; }
+            stopMetadataReader();
+
+            if (currentStation === station.url) {
+                currentStation = null;
+                currentStationName = '';
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+                return;
+            }
+
+            audio = new Audio(station.url);
+            audio.play().catch(() => {
+                alert('Unable to play this stream. It may be offline.');
+                currentStation = null;
+                currentStationName = '';
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+            });
+
+            startMetadataReader(station.url);
+            currentStation = station.url;
+            currentStationName = station.name;
+            trackPlay(station.name, 'guest-picks');
+            nowPlayingStation.textContent = `🎵 ${station.name}`;
+            nowPlayingTrack.textContent = 'Loading track info...';
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            updateMediaSession(station.name, '');
+            render();
+        }
+
+        // --- Event listeners ---
+        stopBtn.addEventListener('click', () => {
+            if (audio) { audio.pause(); audio = null; }
+            stopMetadataReader();
+            currentStation = null;
+            currentStationName = '';
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            render();
+        });
+
+        document.getElementById('random-btn').addEventListener('click', () => {
+            const { favs, others } = getFilteredStations();
+            const visible = [...favs, ...others];
+            if (visible.length === 0) return;
+            const randomStation = visible[Math.floor(Math.random() * visible.length)];
+            playStation(randomStation);
+        });
+
+        refreshMetaBtn.addEventListener('click', () => {
+            refreshMetadata();
+        });
+
+        searchInput.addEventListener('input', () => {
+            render();
+        });
+
+        // --- Media Session actions ---
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('stop', () => stopBtn.click());
+            navigator.mediaSession.setActionHandler('pause', () => { if (audio) audio.pause(); navigator.mediaSession.playbackState = 'paused'; });
+            navigator.mediaSession.setActionHandler('play', () => { if (audio) audio.play(); navigator.mediaSession.playbackState = 'playing'; });
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                const { favs, others } = getFilteredStations();
+                const visible = [...favs, ...others];
+                if (visible.length === 0) return;
+                playStation(visible[Math.floor(Math.random() * visible.length)]);
+            });
+        }
+
+        // --- Load data ---
+        fetch('streams/exclusive-radio.csv')
+            .then(res => res.text())
+            .then(text => {
+                stations = parseStationsCSV(text);
+                return fetch('streams/guestlists.csv');
+            })
+            .then(res => res.text())
+            .then(text => {
+                const rawGuests = parseGuestCSV(text);
+                guestLists = rawGuests.map(g => {
+                    const { favIndices, hidIndices } = parseBookmarkUrl(g.url);
+                    return { label: g.label, favIndices, hidIndices };
+                });
+                renderGuestButtons();
+                // Auto-select first guest if only one
+                if (guestLists.length === 1) {
+                    selectGuest(0);
+                }
+            })
+            .catch(err => {
+                grid.innerHTML = '<p class="no-results">Failed to load stations.</p>';
+                console.error(err);
+            });
+    </script>
+</body>
+</html>

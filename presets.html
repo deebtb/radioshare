@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Genre Presets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2b6cb0;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .random-btn {
+            background: #fbd38d;
+            border: none;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+
+        .random-btn:hover {
+            transform: scale(1.2) rotate(15deg);
+            background: #f6e05e;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .genre-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .genre-btn {
+            padding: 0.6rem 1.2rem;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #2d3748;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .genre-btn:hover {
+            border-color: #63b3ed;
+            background: #ebf8ff;
+        }
+
+        .genre-btn.active {
+            background: #2b6cb0;
+            color: #fff;
+            border-color: #2b6cb0;
+        }
+
+        .genre-btn .count {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-left: 0.3rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .station-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.4rem;
+            min-height: 70px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.15);
+            border-color: #63b3ed;
+        }
+
+        .station-card.playing {
+            border-color: #276749;
+            background: #f0fff4;
+            box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
+        }
+
+        .station-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .station-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .station-genre-tag {
+            font-size: 0.7rem;
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+        }
+
+
+
+        .no-selection {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .now-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a365d;
+            border-top: 3px solid #2b6cb0;
+            padding: 1rem 2rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .now-playing.visible {
+            display: flex;
+        }
+
+        .now-playing-station {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 1rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .now-playing-track {
+            color: #fbd38d;
+            font-size: 1.4rem;
+            font-weight: 600;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stop-btn {
+            padding: 0.5rem 1rem;
+            background: #c53030;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stop-btn:hover {
+            background: #9b2c2c;
+        }
+
+        @media (max-width: 600px) {
+            .stations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .now-playing {
+                flex-wrap: wrap;
+                padding: 0.75rem 1rem;
+            }
+
+            .now-playing-track {
+                font-size: 1.1rem;
+            }
+        }
+
+        body.has-player main {
+            padding-bottom: 6rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎛️ Genre Presets</h1>
+        <div class="header-right">
+            <button class="random-btn" id="random-btn" aria-label="Play random from genre" title="Play random from genre">🎲</button>
+        </div>
+    </header>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Genre Presets</span>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
+        </nav>
+
+        <div class="genre-buttons" id="genre-buttons"></div>
+
+        <section id="stations-section" hidden>
+            <h2 class="section-title" id="section-title"></h2>
+            <div class="stations-grid" id="stations-grid"></div>
+        </section>
+
+        <div class="no-selection" id="no-selection">Pick a genre above to see matching stations.</div>
+    </main>
+
+    <div class="now-playing" id="now-playing">
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-track" id="now-playing-track"></span>
+    </div>
+
+    <script src="tracker.js"></script>
+    <script>
+        const genreButtonsEl = document.getElementById('genre-buttons');
+        const stationsSection = document.getElementById('stations-section');
+        const sectionTitle = document.getElementById('section-title');
+        const grid = document.getElementById('stations-grid');
+        const noSelection = document.getElementById('no-selection');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingTrack = document.getElementById('now-playing-track');
+        const stopBtn = document.getElementById('stop-btn');
+
+        let stations = []; // {name, url, genres: []}
+        let genreMap = {}; // genre -> [station indices]
+        let allGenres = [];
+        let activeGenre = null;
+        let audio = null;
+        let currentStation = null;
+        let metadataController = null;
+        let hiddenStations = JSON.parse(localStorage.getItem('radioHidden') || '[]');
+
+        function parseCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const result = [];
+            for (let i = 2; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                fields.push(current.trim());
+
+                const name = fields[1];
+                const url = fields[2];
+                const genreStr = fields[3] || '';
+                const categoryStr = fields[4] || '';
+
+                if (name && url && url.startsWith('http')) {
+                    const genres = genreStr ? genreStr.split('|').map(g => g.trim()).filter(Boolean) : [];
+                    const categories = categoryStr ? categoryStr.split('|').map(g => g.trim()).filter(Boolean) : [];
+                    result.push({ name, url, genres, categories });
+                }
+            }
+            return result;
+        }
+
+        function buildGenreMap() {
+            genreMap = {};
+            stations.forEach((station, idx) => {
+                if (hiddenStations.includes(station.url)) return;
+                station.categories.forEach(cat => {
+                    if (!genreMap[cat]) genreMap[cat] = [];
+                    genreMap[cat].push(idx);
+                });
+            });
+            allGenres = Object.keys(genreMap).sort((a, b) => {
+                const diff = genreMap[b].length - genreMap[a].length;
+                return diff !== 0 ? diff : a.localeCompare(b);
+            });
+        }
+
+        function renderGenreButtons() {
+            genreButtonsEl.innerHTML = '';
+            allGenres.forEach(genre => {
+                const btn = document.createElement('button');
+                btn.className = 'genre-btn' + (activeGenre === genre ? ' active' : '');
+                btn.innerHTML = `${genre}<span class="count">(${genreMap[genre].length})</span>`;
+                btn.addEventListener('click', () => selectGenre(genre));
+                genreButtonsEl.appendChild(btn);
+            });
+        }
+
+        function selectGenre(genre) {
+            if (activeGenre === genre) {
+                activeGenre = null;
+                stationsSection.hidden = true;
+                noSelection.hidden = false;
+            } else {
+                activeGenre = genre;
+                stationsSection.hidden = false;
+                noSelection.hidden = true;
+                renderStations();
+            }
+            renderGenreButtons();
+        }
+
+        function renderStations() {
+            if (!activeGenre) return;
+            const indices = (genreMap[activeGenre] || []).filter(idx => !hiddenStations.includes(stations[idx].url));
+            sectionTitle.textContent = `${activeGenre} (${indices.length} stations)`;
+            grid.innerHTML = '';
+
+            indices.forEach(idx => {
+                const station = stations[idx];
+                const card = document.createElement('div');
+                card.className = 'station-card' + (currentStation === station.url ? ' playing' : '');
+                card.style.cursor = 'pointer';
+                card.setAttribute('role', 'button');
+                card.setAttribute('aria-label', `Play ${station.name}`);
+                card.addEventListener('click', () => playStation(station));
+
+                const name = document.createElement('span');
+                name.className = 'station-name';
+                name.textContent = station.name;
+
+                const tags = document.createElement('div');
+                tags.className = 'station-genres';
+                station.genres.forEach(g => {
+                    const tag = document.createElement('span');
+                    tag.className = 'station-genre-tag';
+                    tag.textContent = g;
+                    tags.appendChild(tag);
+                });
+
+                card.appendChild(name);
+                card.appendChild(tags);
+                grid.appendChild(card);
+            });
+        }
+
+        function playStation(station) {
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+            stopMetadataReader();
+
+            if (currentStation === station.url) {
+                currentStation = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                renderStations();
+                return;
+            }
+
+            audio = new Audio(station.url);
+            audio.play().catch(() => {
+                alert('Unable to play this stream. It may be offline.');
+                currentStation = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                renderStations();
+            });
+
+            startMetadataReader(station.url);
+
+            currentStation = station.url;
+            trackPlay(station.name, 'presets');
+            nowPlayingStation.textContent = `🎵 ${station.name}`;
+            nowPlayingTrack.textContent = '';
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            updateMediaSession(station.name, '');
+            renderStations();
+        }
+
+        // ICY metadata reader
+        function startMetadataReader(url) {
+            if (metadataController) metadataController.abort();
+            metadataController = new AbortController();
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: metadataController.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) return;
+
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let needLengthByte = false;
+
+                function processChunk({ done, value }) {
+                    if (done) return;
+                    let offset = 0;
+                    while (offset < value.length) {
+                        if (needLengthByte) {
+                            const metaLength = value[offset] * 16;
+                            offset++;
+                            needLengthByte = false;
+                            if (metaLength > 0) {
+                                metaBuffer = [];
+                                metaBytesRemaining = metaLength;
+                            } else {
+                                bytesUntilMeta = metaint;
+                            }
+                        } else if (metaBuffer !== null) {
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    nowPlayingTrack.textContent = match[1];
+                                    updateMediaSession(nowPlayingStation.textContent.replace('🎵 ', ''), match[1]);
+                                }
+                                metaBuffer = null;
+                                bytesUntilMeta = metaint;
+                            }
+                        } else {
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) {
+                                        metaBuffer = [];
+                                        metaBytesRemaining = metaLength;
+                                    } else {
+                                        bytesUntilMeta = metaint;
+                                    }
+                                } else {
+                                    needLengthByte = true;
+                                }
+                            }
+                        }
+                    }
+                    reader.read().then(processChunk).catch(() => {});
+                }
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function concatUint8Arrays(arrays) {
+            const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const arr of arrays) { result.set(arr, offset); offset += arr.length; }
+            return result;
+        }
+
+        function stopMetadataReader() {
+            if (metadataController) { metadataController.abort(); metadataController = null; }
+        }
+
+        function updateMediaSession(stationName, trackTitle) {
+            if (!('mediaSession' in navigator)) return;
+            let title = trackTitle || stationName;
+            let artist = trackTitle ? stationName : 'Genre Presets';
+            if (trackTitle && trackTitle.includes(' - ')) {
+                const parts = trackTitle.split(' - ');
+                artist = parts[0];
+                title = parts.slice(1).join(' - ');
+            }
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title, artist, album: 'Genre Presets',
+                artwork: [{ src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🎛️</text></svg>', sizes: '100x100', type: 'image/svg+xml' }]
+            });
+            navigator.mediaSession.playbackState = 'playing';
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (audio) { audio.pause(); audio = null; }
+            stopMetadataReader();
+            currentStation = null;
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            renderStations();
+        });
+
+        document.getElementById('random-btn').addEventListener('click', () => {
+            const pool = activeGenre
+                ? genreMap[activeGenre].map(i => stations[i]).filter(s => !hiddenStations.includes(s.url))
+                : stations.filter(s => s.categories.length > 0 && !hiddenStations.includes(s.url));
+            if (pool.length === 0) return;
+            playStation(pool[Math.floor(Math.random() * pool.length)]);
+        });
+
+        // Load CSV
+        fetch('streams/exclusive-radio-full.csv')
+            .then(res => res.text())
+            .then(text => {
+                stations = parseCSV(text);
+                buildGenreMap();
+                renderGenreButtons();
+            })
+            .catch(err => {
+                genreButtonsEl.innerHTML = '<p>Failed to load stations.</p>';
+                console.error(err);
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Music by Year</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8; color: #2d3748; min-height: 100vh;
+        }
+        header {
+            background: #2b6cb0; padding: 0.75rem 1.5rem; border-bottom: 3px solid #2c5282;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+        }
+        header h1 { font-size: clamp(1.2rem, 3vw, 1.75rem); color: #fff; white-space: nowrap; }
+        .random-btn {
+            font-size: 2rem; background: #fbd38d; border-radius: 8px; padding: 0.4rem 0.6rem;
+            border: none; cursor: pointer; transition: transform 0.2s; line-height: 1;
+        }
+        .random-btn:hover { transform: scale(1.2) rotate(15deg); background: #f6e05e; }
+        main { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+        .years-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 0.6rem; margin-bottom: 2rem;
+        }
+        .year-btn {
+            padding: 1rem 0.75rem; background: #fff; border: 2px solid #e2e8f0;
+            border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: 600;
+            color: #2d3748; transition: all 0.2s; text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); min-height: 52px;
+        }
+        .year-btn:hover { border-color: #63b3ed; background: #ebf8ff; transform: translateY(-1px); }
+        .year-btn.active { background: #2b6cb0; color: #fff; border-color: #2b6cb0; }
+        .now-playing {
+            position: fixed; bottom: 0; left: 0; right: 0; background: #1a365d;
+            border-top: 3px solid #2b6cb0; padding: 1rem 2rem; display: none;
+            align-items: center; gap: 1rem; z-index: 100;
+        }
+        .now-playing.visible { display: flex; }
+        .now-playing-station { font-weight: 600; color: #e2e8f0; font-size: 1rem; white-space: nowrap; flex-shrink: 0; }
+        .now-playing-track {
+            color: #fbd38d; font-size: 1.4rem; font-weight: 600; font-style: italic;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .now-playing-track.scrolling { text-overflow: clip; animation: marquee 12s linear infinite; }
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .stop-btn {
+            padding: 0.5rem 1rem; background: #c53030; color: #fff; border: none;
+            border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500;
+        }
+        .stop-btn:hover { background: #9b2c2c; }
+        @media (max-width: 600px) {
+            .years-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); }
+            header { padding: 0.75rem 1rem; flex-direction: column; align-items: stretch; }
+            header h1 { text-align: center; margin-bottom: 0.5rem; }
+            .now-playing { flex-wrap: wrap; padding: 0.75rem 1rem; }
+            .now-playing-track { font-size: 1.1rem; }
+        }
+        body.has-player main { padding-bottom: 6rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📅 Music by Year</h1>
+        <button class="random-btn" id="random-btn" aria-label="Play random year" title="Play random year">🎲</button>
+    </header>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Music by Year</span>
+        </nav>
+
+        <div class="years-grid" id="years-grid"></div>
+    </main>
+
+    <div class="now-playing" id="now-playing">
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-track" id="now-playing-track"></span>
+    </div>
+
+    <script src="tracker.js"></script>
+    <script>
+        const STREAM_BASE = 'https://streaming.positivity.radio/tt/';
+        const START_YEAR = 1950;
+        const END_YEAR = 2026;
+
+        const grid = document.getElementById('years-grid');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingTrack = document.getElementById('now-playing-track');
+        const stopBtn = document.getElementById('stop-btn');
+
+        let audio = null;
+        let currentYear = null;
+        let metadataController = null;
+
+        function getStreamUrl(year) {
+            return STREAM_BASE + year + '/icecast.audio';
+        }
+
+        function render() {
+            grid.innerHTML = '';
+            for (let y = START_YEAR; y <= END_YEAR; y++) {
+                const btn = document.createElement('button');
+                btn.className = 'year-btn' + (currentYear === y ? ' active' : '');
+                btn.textContent = y;
+                btn.addEventListener('click', () => playYear(y));
+                grid.appendChild(btn);
+            }
+        }
+
+        function playYear(year) {
+            if (audio) { audio.pause(); audio = null; }
+            stopMetadataReader();
+
+            if (currentYear === year) {
+                currentYear = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+                return;
+            }
+
+            const url = getStreamUrl(year);
+            audio = new Audio(url);
+            audio.play().catch(() => {
+                alert('Unable to play stream for ' + year + '. It may be unavailable.');
+                currentYear = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                render();
+            });
+
+            startMetadataReader(url);
+            currentYear = year;
+            nowPlayingStation.textContent = '🎵 ' + year;
+            nowPlayingTrack.textContent = 'Loading track info...';
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            updateMediaSession(String(year), '');
+            trackPlay('TickTock ' + year, 'years');
+            render();
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (audio) { audio.pause(); audio = null; }
+            stopMetadataReader();
+            currentYear = null;
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            render();
+        });
+
+        document.getElementById('random-btn').addEventListener('click', () => {
+            const year = START_YEAR + Math.floor(Math.random() * (END_YEAR - START_YEAR + 1));
+            playYear(year);
+        });
+
+        // --- ICY metadata reader ---
+        function startMetadataReader(url) {
+            if (metadataController) metadataController.abort();
+            metadataController = new AbortController();
+
+            fetch(url, {
+                headers: { 'Icy-MetaData': '1' },
+                signal: metadataController.signal
+            }).then(response => {
+                const metaint = parseInt(response.headers.get('icy-metaint'), 10);
+                if (!metaint) return;
+                const reader = response.body.getReader();
+                let bytesUntilMeta = metaint;
+                let metaBuffer = null;
+                let metaBytesRemaining = 0;
+                let needLengthByte = false;
+
+                function processChunk({ done, value }) {
+                    if (done) return;
+                    let offset = 0;
+                    while (offset < value.length) {
+                        if (needLengthByte) {
+                            const metaLength = value[offset] * 16;
+                            offset++;
+                            needLengthByte = false;
+                            if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                            else { bytesUntilMeta = metaint; }
+                        } else if (metaBuffer !== null) {
+                            const bytesToRead = Math.min(metaBytesRemaining, value.length - offset);
+                            metaBuffer.push(value.slice(offset, offset + bytesToRead));
+                            metaBytesRemaining -= bytesToRead;
+                            offset += bytesToRead;
+                            if (metaBytesRemaining === 0) {
+                                const combined = concatUint8Arrays(metaBuffer);
+                                const metaStr = new TextDecoder().decode(combined).replace(/\0+$/, '');
+                                const match = metaStr.match(/StreamTitle='([^']*)'/);
+                                if (match && match[1]) {
+                                    nowPlayingTrack.textContent = match[1];
+                                    checkTrackOverflow();
+                                    updateMediaSession(String(currentYear), match[1]);
+                                }
+                                metaBuffer = null;
+                                bytesUntilMeta = metaint;
+                            }
+                        } else {
+                            const bytesToSkip = Math.min(bytesUntilMeta, value.length - offset);
+                            bytesUntilMeta -= bytesToSkip;
+                            offset += bytesToSkip;
+                            if (bytesUntilMeta === 0) {
+                                if (offset < value.length) {
+                                    const metaLength = value[offset] * 16;
+                                    offset++;
+                                    if (metaLength > 0) { metaBuffer = []; metaBytesRemaining = metaLength; }
+                                    else { bytesUntilMeta = metaint; }
+                                } else { needLengthByte = true; }
+                            }
+                        }
+                    }
+                    reader.read().then(processChunk).catch(() => {});
+                }
+                reader.read().then(processChunk).catch(() => {});
+            }).catch(() => {});
+        }
+
+        function concatUint8Arrays(arrays) {
+            const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const arr of arrays) { result.set(arr, offset); offset += arr.length; }
+            return result;
+        }
+
+        function stopMetadataReader() {
+            if (metadataController) { metadataController.abort(); metadataController = null; }
+        }
+
+        function checkTrackOverflow() {
+            const el = nowPlayingTrack;
+            if (el.scrollWidth > el.clientWidth) { el.classList.add('scrolling'); }
+            else { el.classList.remove('scrolling'); }
+        }
+
+        function updateMediaSession(stationName, trackTitle) {
+            if (!('mediaSession' in navigator)) return;
+            let title = trackTitle || stationName;
+            let artist = trackTitle ? 'TickTock ' + stationName : 'Music by Year';
+            if (trackTitle && trackTitle.includes(' - ')) {
+                const parts = trackTitle.split(' - ');
+                artist = parts[0];
+                title = parts.slice(1).join(' - ');
+            }
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title, artist, album: 'Music by Year',
+                artwork: [{ src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">📅</text></svg>', sizes: '100x100', type: 'image/svg+xml' }]
+            });
+            navigator.mediaSession.playbackState = 'playing';
+        }
+
+        // Media session actions
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('stop', () => stopBtn.click());
+            navigator.mediaSession.setActionHandler('pause', () => { if (audio) audio.pause(); navigator.mediaSession.playbackState = 'paused'; });
+            navigator.mediaSession.setActionHandler('play', () => { if (audio) audio.play(); navigator.mediaSession.playbackState = 'playing'; });
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                const year = START_YEAR + Math.floor(Math.random() * (END_YEAR - START_YEAR + 1));
+                playYear(year);
+            });
+        }
+
+        render();
+    </script>
+</body>
+</html>

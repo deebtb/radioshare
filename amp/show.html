@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Show Details - AMP Archive</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8; color: #2d3748; min-height: 100vh;
+        }
+        header {
+            background: #1a365d; padding: 1rem 1.5rem; border-bottom: 3px solid #2c5282;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+        }
+        header h1 { font-size: 1.4rem; color: #fff; }
+        .back-link { color: #bee3f8; text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid #63b3ed; }
+        .back-link:hover { color: #fff; }
+        main { max-width: 700px; margin: 0 auto; padding: 2rem 1rem; }
+        .show-header { margin-bottom: 1.5rem; text-align: center; }
+        .show-nav {
+            display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.75rem;
+        }
+        .nav-arrow {
+            background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px;
+            padding: 0.3rem 0.7rem; font-size: 0.8rem; color: #2b6cb0; text-decoration: none;
+            font-weight: 500; transition: all 0.2s; white-space: nowrap;
+        }
+        .nav-arrow:hover { background: #bee3f8; }
+        .nav-arrow.disabled { opacity: 0.3; pointer-events: none; }
+        .show-title { font-size: 1.5rem; font-weight: 700; color: #1a202c; margin-bottom: 0.3rem; }
+        .show-meta { font-size: 0.9rem; color: #718096; display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+        .tracklist {
+            background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;
+        }
+        .track-row {
+            display: flex; align-items: center; padding: 0.7rem 1.25rem; gap: 1rem;
+            border-bottom: 1px solid #f7fafc;
+        }
+        .track-row:last-child { border-bottom: none; }
+        .track-row:hover { background: #f7fafc; }
+        .track-num {
+            font-size: 0.8rem; color: #a0aec0; font-weight: 600; min-width: 1.75rem; text-align: right;
+        }
+        .track-info { display: flex; flex-direction: column; gap: 0.1rem; }
+        .track-song { font-size: 0.95rem; font-weight: 600; color: #1a202c; }
+        .track-artist { font-size: 0.8rem; color: #718096; }
+        .loading { text-align: center; padding: 3rem; color: #718096; }
+        .error { text-align: center; padding: 3rem; color: #c53030; }
+        @media (max-width: 600px) {
+            header { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="page-title">Show Details</h1>
+        <a href="shows.html" class="back-link">&larr; All Shows</a>
+    </header>
+    <main>
+        <div class="show-header" id="show-header"></div>
+        <div class="tracklist" id="tracklist">
+            <p class="loading">Loading...</p>
+        </div>
+    </main>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const showTitle = params.get('title');
+        const showDate = params.get('date');
+
+        if (!showTitle || !showDate) {
+            document.getElementById('tracklist').innerHTML = '<p class="error">Missing show parameters. <a href="shows.html">Go back to shows.</a></p>';
+        } else {
+            loadShow();
+        }
+
+        function parseCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                for (const char of line) {
+                    if (char === '"') { inQuotes = !inQuotes; }
+                    else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else { current += char; }
+                }
+                fields.push(current.trim());
+                rows.push({
+                    title: fields[1],
+                    date: fields[2],
+                    order: parseInt(fields[3], 10),
+                    song: fields[4],
+                    artist: fields[5]
+                });
+            }
+            return rows;
+        }
+
+        function formatDate(d) {
+            const parts = d.split('-');
+            const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+            return dt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function escHtml(s) {
+            return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function loadShow() {
+            fetch('amp-playlists.csv')
+                .then(r => r.text())
+                .then(text => {
+                    const rows = parseCSV(text);
+
+                    // Build ordered show list for prev/next nav
+                    const showMap = {};
+                    rows.forEach(r => {
+                        const key = r.title + '|' + r.date;
+                        if (!showMap[key]) showMap[key] = { title: r.title, date: r.date };
+                    });
+                    const allShows = Object.values(showMap).sort((a, b) => a.date.localeCompare(b.date));
+                    const currentIdx = allShows.findIndex(s => s.title === showTitle && s.date === showDate);
+
+                    const tracks = rows
+                        .filter(r => r.title === showTitle && r.date === showDate)
+                        .sort((a, b) => a.order - b.order);
+
+                    if (tracks.length === 0) {
+                        document.getElementById('tracklist').innerHTML = '<p class="error">Show not found.</p>';
+                        return;
+                    }
+
+                    document.title = `${showTitle} - AMP Archive`;
+                    document.getElementById('page-title').textContent = showTitle;
+
+                    // Build prev/next links
+                    const prev = currentIdx > 0 ? allShows[currentIdx - 1] : null;
+                    const next = currentIdx < allShows.length - 1 ? allShows[currentIdx + 1] : null;
+                    const prevLink = prev
+                        ? `<a href="show.html?title=${encodeURIComponent(prev.title)}&date=${encodeURIComponent(prev.date)}" class="nav-arrow">&larr; ${escHtml(prev.title)}</a>`
+                        : `<span class="nav-arrow disabled">&larr; Start</span>`;
+                    const nextLink = next
+                        ? `<a href="show.html?title=${encodeURIComponent(next.title)}&date=${encodeURIComponent(next.date)}" class="nav-arrow">${escHtml(next.title)} &rarr;</a>`
+                        : `<span class="nav-arrow disabled">End &rarr;</span>`;
+
+                    document.getElementById('show-header').innerHTML = `
+                        <div class="show-nav">${prevLink}${nextLink}</div>
+                        <div class="show-title">${escHtml(showTitle)}</div>
+                        <div class="show-meta">
+                            <span>${formatDate(showDate)}</span>
+                            <span>${tracks.length} songs</span>
+                        </div>
+                    `;
+
+                    let html = '';
+                    tracks.forEach(t => {
+                        html += `
+                            <div class="track-row">
+                                <span class="track-num">${t.order}</span>
+                                <div class="track-info">
+                                    <span class="track-song">${escHtml(t.song)}</span>
+                                    <span class="track-artist">${escHtml(t.artist)}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('tracklist').innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('tracklist').innerHTML = '<p class="error">Failed to load show data.</p>';
+                    console.error(err);
+                });
+        }
+    </script>
+</body>
+</html>
