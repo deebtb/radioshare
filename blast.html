@@ -175,6 +175,7 @@
             display: none;
             align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
             z-index: 100;
         }
 
@@ -211,6 +212,56 @@
             background: #9b2c2c;
         }
 
+        .progress-bar {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .progress-bar.visible {
+            display: flex;
+        }
+
+        .progress-time {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            min-width: 3.2em;
+        }
+
+        .progress-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #2d3748;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fbd38d;
+            cursor: pointer;
+        }
+
+        .progress-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fbd38d;
+            border: none;
+            cursor: pointer;
+        }
+
         @media (max-width: 600px) {
             .stations-grid {
                 grid-template-columns: 1fr;
@@ -230,6 +281,11 @@
             .now-playing {
                 flex-wrap: wrap;
                 padding: 0.75rem 1rem;
+            }
+
+            .progress-bar {
+                width: 100%;
+                order: 10;
             }
         }
 
@@ -266,6 +322,11 @@
         <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
         <span class="now-playing-station" id="now-playing-station"></span>
         <span class="now-playing-status" id="now-playing-status"></span>
+        <div class="progress-bar" id="progress-bar">
+            <span class="progress-time" id="progress-current">0:00</span>
+            <input type="range" class="progress-slider" id="progress-slider" min="0" max="100" value="0" step="0.1" aria-label="Seek position">
+            <span class="progress-time" id="progress-duration">0:00</span>
+        </div>
     </div>
 
     <script src="tracker.js"></script>
@@ -302,7 +363,49 @@
 
         let audio = null;
         let currentHandle = null;
+        let currentIsArchive = false;
         let showStatuses = {}; // handle -> status data from worker
+
+        const progressBar = document.getElementById('progress-bar');
+        const progressSlider = document.getElementById('progress-slider');
+        const progressCurrent = document.getElementById('progress-current');
+        const progressDuration = document.getElementById('progress-duration');
+        let isSeeking = false;
+
+        function formatDuration(seconds) {
+            if (!seconds || !isFinite(seconds)) return '0:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function showProgressBar(show) {
+            if (show) {
+                progressBar.classList.add('visible');
+            } else {
+                progressBar.classList.remove('visible');
+                progressSlider.value = 0;
+                progressCurrent.textContent = '0:00';
+                progressDuration.textContent = '0:00';
+            }
+        }
+
+        progressSlider.addEventListener('input', () => {
+            isSeeking = true;
+            if (audio && isFinite(audio.duration)) {
+                const seekTime = (progressSlider.value / 100) * audio.duration;
+                progressCurrent.textContent = formatDuration(seekTime);
+            }
+        });
+
+        progressSlider.addEventListener('change', () => {
+            if (audio && isFinite(audio.duration)) {
+                audio.currentTime = (progressSlider.value / 100) * audio.duration;
+            }
+            isSeeking = false;
+        });
 
         function formatTime(unix) {
             if (!unix) return '';
@@ -403,18 +506,53 @@
 
             if (currentHandle === show.handle) {
                 currentHandle = null;
+                currentIsArchive = false;
                 nowPlaying.classList.remove('visible');
                 document.body.classList.remove('has-player');
+                showProgressBar(false);
                 render();
                 return;
             }
 
             audio = new Audio(status.url);
+            currentIsArchive = (status.state === 'archived');
+
+            if (currentIsArchive) {
+                audio.addEventListener('loadedmetadata', () => {
+                    if (isFinite(audio.duration)) {
+                        progressDuration.textContent = formatDuration(audio.duration);
+                        progressSlider.max = 100;
+                        showProgressBar(true);
+                    }
+                });
+
+                audio.addEventListener('timeupdate', () => {
+                    if (!isSeeking && isFinite(audio.duration) && audio.duration > 0) {
+                        const pct = (audio.currentTime / audio.duration) * 100;
+                        progressSlider.value = pct;
+                        progressCurrent.textContent = formatDuration(audio.currentTime);
+                    }
+                });
+
+                audio.addEventListener('ended', () => {
+                    currentHandle = null;
+                    currentIsArchive = false;
+                    nowPlaying.classList.remove('visible');
+                    document.body.classList.remove('has-player');
+                    showProgressBar(false);
+                    render();
+                });
+            } else {
+                showProgressBar(false);
+            }
+
             audio.play().catch(() => {
                 alert('Unable to play this stream. It may be offline or expired.');
                 currentHandle = null;
+                currentIsArchive = false;
                 nowPlaying.classList.remove('visible');
                 document.body.classList.remove('has-player');
+                showProgressBar(false);
                 render();
             });
 
@@ -424,14 +562,17 @@
             nowPlayingStatus.textContent = status.state === 'live' ? 'Live broadcast' : 'Playing archive';
             nowPlaying.classList.add('visible');
             document.body.classList.add('has-player');
+            if (!currentIsArchive) showProgressBar(false);
             render();
         }
 
         stopBtn.addEventListener('click', () => {
             if (audio) { audio.pause(); audio = null; }
             currentHandle = null;
+            currentIsArchive = false;
             nowPlaying.classList.remove('visible');
             document.body.classList.remove('has-player');
+            showProgressBar(false);
             render();
         });
 
