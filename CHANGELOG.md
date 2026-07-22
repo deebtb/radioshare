@@ -2,6 +2,11 @@
 
 All notable changes to DeeRadio are documented here.
 
+## 2026-07-21 (v1.2.0)
+
+- Add seekable progress bar for archive playback on Blast Radio page
+- Add version footer (v1.2.0) to all pages
+
 ## 2026-07-21
 
 - Add Radio Ted to Blast
