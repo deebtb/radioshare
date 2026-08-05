@@ -312,8 +312,16 @@
             <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
         </nav>
 
-        <section>
-            <h2 class="section-title">Shows</h2>
+        <section style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0;">
+                <h2 style="font-size: 1.25rem; color: #2d3748; margin: 0;">Shows</h2>
+                <a href="https://blast-podcast.deebeyondthebar.workers.dev" id="podcast-link"
+                   style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.85rem; background: #f6ad55; color: #744210; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-decoration: none; border: 1px solid #ed8936; transition: background 0.2s;"
+                   title="Subscribe to archived shows as a podcast feed"
+                   onclick="event.preventDefault(); copyPodcastUrl(this);">
+                    🎙️ Podcast Feed
+                </a>
+            </div>
             <div class="stations-grid" id="stations-grid"></div>
         </section>
     </main>
@@ -330,6 +338,30 @@
             <span class="progress-time" id="progress-duration">0:00</span>
         </div>
     </div>
+
+    <div id="toast" style="position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%); background: #2d3748; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200;">
+        Podcast URL copied!
+    </div>
+
+    <script>
+        const PODCAST_FEED_URL = 'https://blast-podcast.deebeyondthebar.workers.dev';
+
+        function copyPodcastUrl(el) {
+            navigator.clipboard.writeText(PODCAST_FEED_URL).then(() => {
+                showToast('Podcast URL copied — paste into your podcast app');
+            }).catch(() => {
+                // Fallback: open the feed directly
+                window.open(PODCAST_FEED_URL, '_blank');
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+        }
+    </script>
 
     <script src="tracker.js"></script>
     <script>
