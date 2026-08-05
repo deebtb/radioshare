@@ -100,6 +100,25 @@
             box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
         }
 
+        .download-btn {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .download-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
         .station-name {
             font-size: 1.1rem;
             font-weight: 700;
@@ -513,6 +532,21 @@
             card.appendChild(nameEl);
             card.appendChild(badge);
             card.appendChild(meta);
+
+            // Download button for archived shows
+            if (status && status.state === 'archived' && status.url) {
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'download-btn';
+                dlBtn.textContent = '💾';
+                dlBtn.setAttribute('aria-label', `Download ${show.name} archive`);
+                dlBtn.setAttribute('title', 'Download archive');
+                dlBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    downloadArchive(show, status);
+                });
+                card.appendChild(dlBtn);
+            }
+
             return card;
         }
 
@@ -534,6 +568,20 @@
             sorted.forEach(show => {
                 grid.appendChild(createCard(show, showStatuses[show.handle]));
             });
+        }
+
+        function downloadArchive(show, status) {
+            const confirmMsg = `Download "${show.name}" archive?\n\nThis will save the mp3 file to your device.`;
+            if (!confirm(confirmMsg)) return;
+
+            // Create a temporary link to trigger the download
+            const a = document.createElement('a');
+            a.href = status.url;
+            a.download = `${show.handle}-archive.mp3`;
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         function playShow(show, status) {
