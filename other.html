@@ -870,7 +870,9 @@
                     console.error(`[meta] ICY fetch error for ${url}:`, err.message);
                 }
             });
-        } — parses Ogg pages looking for comment headers
+        }
+
+        // Ogg Vorbis comment reader — parses Ogg pages looking for comment headers
         // Ogg streams (FLAC/Vorbis) embed metadata in page headers as Vorbis comments.
         // We look for the pattern "ARTIST=..." and "TITLE=..." or "StreamTitle=..." in the raw stream.
         function startOggMetadataReader(url, controller, onTitle) {
