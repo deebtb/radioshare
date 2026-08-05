@@ -762,6 +762,12 @@
         // CORS proxy for ICY metadata — avoids preflight issues and exposes icy-metaint
         const ICY_PROXY_URL = 'https://icy-proxy.deebeyondthebar.workers.dev';
 
+        // Debug logging — enable by adding ?debug to the URL
+        const DEBUG = new URLSearchParams(window.location.search).has('debug');
+        function debugLog(...args) { if (DEBUG) console.log(...args); }
+        function debugWarn(...args) { if (DEBUG) console.warn(...args); }
+        function debugError(...args) { if (DEBUG) console.error(...args); }
+
         function proxyUrl(url) {
             return `${ICY_PROXY_URL}/?url=${encodeURIComponent(url)}`;
         }
@@ -779,14 +785,14 @@
             metadataController = new AbortController();
 
             if (NO_METADATA_URLS.has(url)) {
-                console.log(`[meta] Skipping ${url} (no-metadata list)`);
+                debugLog(`[meta] Skipping ${url} (no-metadata list)`);
                 return;
             }
 
             if (isOggStream(url)) {
-                console.log(`[meta] Starting Ogg reader for ${url}`);
+                debugLog(`[meta] Starting Ogg reader for ${url}`);
                 startOggMetadataReader(url, metadataController, (title) => {
-                    console.log(`[meta] Ogg title found: "${title}" from ${url}`);
+                    debugLog(`[meta] Ogg title found: "${title}" from ${url}`);
                     nowPlayingTrack.textContent = title;
                     checkTrackOverflow();
                     updateMediaSession(currentStationName, title);
@@ -796,14 +802,14 @@
 
             // Use proxy to avoid CORS/preflight issues with Icy-MetaData header
             const fetchUrl = proxyUrl(url);
-            console.log(`[meta] Starting ICY reader via proxy for ${url}`);
+            debugLog(`[meta] Starting ICY reader via proxy for ${url}`);
             fetch(fetchUrl, {
                 signal: metadataController.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
-                console.log(`[meta] ICY response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                debugLog(`[meta] ICY response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
                 if (!metaint) {
-                    console.warn(`[meta] No icy-metaint for ${url} — cannot read metadata`);
+                    debugWarn(`[meta] No icy-metaint for ${url} — cannot read metadata`);
                     return;
                 }
 
@@ -878,7 +884,7 @@
                 reader.read().then(processChunk).catch(() => {});
             }).catch((err) => {
                 if (err.name !== 'AbortError') {
-                    console.error(`[meta] ICY fetch error for ${url}:`, err.message);
+                    debugError(`[meta] ICY fetch error for ${url}:`, err.message);
                 }
             });
         }
@@ -1051,7 +1057,7 @@
 
         function peekStationMetadata(url) {
             if (NO_METADATA_URLS.has(url)) {
-                console.log(`[peek] Skipping ${url} (no-metadata list)`);
+                debugLog(`[peek] Skipping ${url} (no-metadata list)`);
                 return;
             }
 
@@ -1060,24 +1066,24 @@
 
             // Timeout: abort after 10 seconds if no metadata found
             const timeout = setTimeout(() => {
-                console.warn(`[peek] Timeout for ${url} — no metadata found in 10s`);
+                debugWarn(`[peek] Timeout for ${url} — no metadata found in 10s`);
                 controller.abort();
             }, 10000);
 
             if (isOggStream(url)) {
-                console.log(`[peek] Starting Ogg peek for ${url}`);
+                debugLog(`[peek] Starting Ogg peek for ${url}`);
                 peekOggMetadata(url, controller, timeout);
                 return;
             }
 
-            console.log(`[peek] Starting ICY peek via proxy for ${url}`);
+            debugLog(`[peek] Starting ICY peek via proxy for ${url}`);
             fetch(proxyUrl(url), {
                 signal: controller.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
-                console.log(`[peek] Response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                debugLog(`[peek] Response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
                 if (!metaint) {
-                    console.warn(`[peek] No icy-metaint for ${url} — aborting`);
+                    debugWarn(`[peek] No icy-metaint for ${url} — aborting`);
                     clearTimeout(timeout);
                     controller.abort();
                     return;
@@ -1151,7 +1157,7 @@
             }).catch((err) => {
                 clearTimeout(timeout);
                 if (err.name !== 'AbortError') {
-                    console.error(`[peek] ICY fetch error for ${url}:`, err.message);
+                    debugError(`[peek] ICY fetch error for ${url}:`, err.message);
                 }
             });
         }
@@ -1163,12 +1169,12 @@
             fetch(proxyUrl(url), {
                 signal: controller.signal
             }).then(response => {
-                console.log(`[peek-ogg] Response for ${url}: status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                debugLog(`[peek-ogg] Response for ${url}: status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
                 const reader = response.body.getReader();
                 let totalRead = 0;
 
                 function processChunk({ done, value }) {
-                    if (done) { clearTimeout(timeout); console.log(`[peek-ogg] Stream ended for ${url}, totalRead=${totalRead}`); return; }
+                    if (done) { clearTimeout(timeout); debugLog(`[peek-ogg] Stream ended for ${url}, totalRead=${totalRead}`); return; }
                     totalRead += value.length;
 
                     const newBuf = new Uint8Array(accumulated.length + value.length);
@@ -1178,7 +1184,7 @@
 
                     const title = extractOggTitle(accumulated);
                     if (title) {
-                        console.log(`[peek-ogg] Found title for ${url}: "${title}" (after ${totalRead} bytes)`);
+                        debugLog(`[peek-ogg] Found title for ${url}: "${title}" (after ${totalRead} bytes)`);
                         favTrackInfo[url] = title;
                         updateFavTrackDisplay(url, title);
                         clearTimeout(timeout);
@@ -1187,7 +1193,7 @@
                     }
 
                     if (totalRead >= MAX_PEEK) {
-                        console.warn(`[peek-ogg] Max read reached for ${url} (${totalRead} bytes) — no metadata found`);
+                        debugWarn(`[peek-ogg] Max read reached for ${url} (${totalRead} bytes) — no metadata found`);
                         clearTimeout(timeout);
                         controller.abort();
                         return;
@@ -1200,7 +1206,7 @@
             }).catch((err) => {
                 clearTimeout(timeout);
                 if (err.name !== 'AbortError') {
-                    console.error(`[peek-ogg] Fetch error for ${url}:`, err.message);
+                    debugError(`[peek-ogg] Fetch error for ${url}:`, err.message);
                 }
             });
         }
