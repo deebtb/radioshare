@@ -768,10 +768,15 @@
             }
             metadataController = new AbortController();
 
-            if (NO_METADATA_URLS.has(url)) return;
+            if (NO_METADATA_URLS.has(url)) {
+                console.log(`[meta] Skipping ${url} (no-metadata list)`);
+                return;
+            }
 
             if (isOggStream(url)) {
+                console.log(`[meta] Starting Ogg reader for ${url}`);
                 startOggMetadataReader(url, metadataController, (title) => {
+                    console.log(`[meta] Ogg title found: "${title}" from ${url}`);
                     nowPlayingTrack.textContent = title;
                     checkTrackOverflow();
                     updateMediaSession(currentStationName, title);
@@ -779,12 +784,17 @@
                 return;
             }
 
+            console.log(`[meta] Starting ICY reader for ${url}`);
             fetch(url, {
                 headers: { 'Icy-MetaData': '1' },
                 signal: metadataController.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
-                if (!metaint) return;
+                console.log(`[meta] ICY response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                if (!metaint) {
+                    console.warn(`[meta] No icy-metaint for ${url} — cannot read metadata`);
+                    return;
+                }
 
                 const reader = response.body.getReader();
                 let bytesUntilMeta = metaint;
@@ -855,10 +865,12 @@
                 }
 
                 reader.read().then(processChunk).catch(() => {});
-            }).catch(() => {});
-        }
-
-        // Ogg Vorbis comment reader — parses Ogg pages looking for comment headers
+            }).catch((err) => {
+                if (err.name !== 'AbortError') {
+                    console.error(`[meta] ICY fetch error for ${url}:`, err.message);
+                }
+            });
+        } — parses Ogg pages looking for comment headers
         // Ogg streams (FLAC/Vorbis) embed metadata in page headers as Vorbis comments.
         // We look for the pattern "ARTIST=..." and "TITLE=..." or "StreamTitle=..." in the raw stream.
         function startOggMetadataReader(url, controller, onTitle) {
@@ -1025,25 +1037,39 @@
         let peekControllers = [];
 
         function peekStationMetadata(url) {
-            if (NO_METADATA_URLS.has(url)) return;
+            if (NO_METADATA_URLS.has(url)) {
+                console.log(`[peek] Skipping ${url} (no-metadata list)`);
+                return;
+            }
 
             const controller = new AbortController();
             peekControllers.push(controller);
 
             // Timeout: abort after 10 seconds if no metadata found
-            const timeout = setTimeout(() => controller.abort(), 10000);
+            const timeout = setTimeout(() => {
+                console.warn(`[peek] Timeout for ${url} — no metadata found in 10s`);
+                controller.abort();
+            }, 10000);
 
             if (isOggStream(url)) {
+                console.log(`[peek] Starting Ogg peek for ${url}`);
                 peekOggMetadata(url, controller, timeout);
                 return;
             }
 
+            console.log(`[peek] Starting ICY peek for ${url}`);
             fetch(url, {
                 headers: { 'Icy-MetaData': '1' },
                 signal: controller.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
-                if (!metaint) { clearTimeout(timeout); controller.abort(); return; }
+                console.log(`[peek] Response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                if (!metaint) {
+                    console.warn(`[peek] No icy-metaint for ${url} — aborting`);
+                    clearTimeout(timeout);
+                    controller.abort();
+                    return;
+                }
 
                 const reader = response.body.getReader();
                 let bytesUntilMeta = metaint;
@@ -1110,7 +1136,12 @@
                 }
 
                 reader.read().then(processChunk).catch(() => {});
-            }).catch(() => { clearTimeout(timeout); });
+            }).catch((err) => {
+                clearTimeout(timeout);
+                if (err.name !== 'AbortError') {
+                    console.error(`[peek] ICY fetch error for ${url}:`, err.message);
+                }
+            });
         }
 
         function peekOggMetadata(url, controller, timeout) {
@@ -1120,11 +1151,12 @@
             fetch(url, {
                 signal: controller.signal
             }).then(response => {
+                console.log(`[peek-ogg] Response for ${url}: status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
                 const reader = response.body.getReader();
                 let totalRead = 0;
 
                 function processChunk({ done, value }) {
-                    if (done) { clearTimeout(timeout); return; }
+                    if (done) { clearTimeout(timeout); console.log(`[peek-ogg] Stream ended for ${url}, totalRead=${totalRead}`); return; }
                     totalRead += value.length;
 
                     const newBuf = new Uint8Array(accumulated.length + value.length);
@@ -1134,6 +1166,7 @@
 
                     const title = extractOggTitle(accumulated);
                     if (title) {
+                        console.log(`[peek-ogg] Found title for ${url}: "${title}" (after ${totalRead} bytes)`);
                         favTrackInfo[url] = title;
                         updateFavTrackDisplay(url, title);
                         clearTimeout(timeout);
@@ -1142,6 +1175,7 @@
                     }
 
                     if (totalRead >= MAX_PEEK) {
+                        console.warn(`[peek-ogg] Max read reached for ${url} (${totalRead} bytes) — no metadata found`);
                         clearTimeout(timeout);
                         controller.abort();
                         return;
@@ -1151,7 +1185,12 @@
                 }
 
                 reader.read().then(processChunk).catch(() => {});
-            }).catch(() => { clearTimeout(timeout); });
+            }).catch((err) => {
+                clearTimeout(timeout);
+                if (err.name !== 'AbortError') {
+                    console.error(`[peek-ogg] Fetch error for ${url}:`, err.message);
+                }
+            });
         }
 
         function updateFavTrackDisplay(url, track) {
