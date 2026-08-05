@@ -425,6 +425,57 @@
             }
         }
 
+        .flac-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .flac-toggle input {
+            display: none;
+        }
+
+        .flac-toggle-slider {
+            width: 36px;
+            height: 20px;
+            background: #cbd5e0;
+            border-radius: 10px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .flac-toggle-slider::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .flac-toggle input:checked + .flac-toggle-slider {
+            background: #2b6cb0;
+        }
+
+        .flac-toggle input:checked + .flac-toggle-slider::after {
+            transform: translateX(16px);
+        }
+
+        .flac-toggle-text {
+            font-size: 0.8rem;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .flac-toggle input:checked ~ .flac-toggle-text {
+            color: #2b6cb0;
+        }
+
         body.has-player main {
             padding-bottom: 6rem;
         }
@@ -463,7 +514,14 @@
         </section>
 
         <section>
-            <h2 class="section-title">All Stations</h2>
+            <div class="section-header">
+                <h2 class="section-title">All Stations</h2>
+                <label class="flac-toggle" id="flac-toggle-label">
+                    <input type="checkbox" id="flac-toggle">
+                    <span class="flac-toggle-slider"></span>
+                    <span class="flac-toggle-text">Show FLAC</span>
+                </label>
+            </div>
             <div class="stations-grid" id="stations-grid"></div>
             <div class="no-results" id="no-results" hidden>No stations found.</div>
             <button class="restore-btn hidden" id="restore-btn">Restore hidden channels</button>
@@ -503,6 +561,7 @@
         let hiddenStations = JSON.parse(localStorage.getItem('otherHidden') || '[]');
         let metadataController = null;
         const restoreBtn = document.getElementById('restore-btn');
+        const flacToggle = document.getElementById('flac-toggle');
 
         // --- Bitset URL encoding/decoding ---
 
@@ -1092,9 +1151,18 @@
             refreshFavoritesMetadata();
         }
 
+        function isFlacStation(station) {
+            return station.name.includes('(FLAC)');
+        }
+
         function getFiltered() {
             const query = searchInput.value.toLowerCase();
-            return stations.filter(s => !isHidden(s.url) && s.name.toLowerCase().includes(query));
+            const showFlac = flacToggle.checked;
+            return stations.filter(s => {
+                if (isHidden(s.url)) return false;
+                if (!showFlac && isFlacStation(s)) return false;
+                return s.name.toLowerCase().includes(query);
+            });
         }
 
         stopBtn.addEventListener('click', () => {
@@ -1145,6 +1213,10 @@
         });
 
         searchInput.addEventListener('input', () => {
+            render();
+        });
+
+        flacToggle.addEventListener('change', () => {
             render();
         });
 
