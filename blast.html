@@ -570,8 +570,21 @@
             });
         }
 
+        function formatFileSize(bytes) {
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
         function downloadArchive(show, status) {
-            const confirmMsg = `Download "${show.name}" archive?\n\nThis will save the mp3 file to your device.`;
+            // Estimate file size from duration (mp3 at 128kbps)
+            let sizeInfo = '';
+            if (status.start && status.end) {
+                const durationSec = status.end - status.start;
+                const estimatedBytes = durationSec * 128000 / 8;
+                sizeInfo = `\nEstimated size: ~${formatFileSize(estimatedBytes)}`;
+            }
+
+            const confirmMsg = `Download "${show.name}" archive?${sizeInfo}\n\nThis will save the mp3 file to your device.`;
             if (!confirm(confirmMsg)) return;
 
             // Fetch as blob to force a real download (download attr is ignored for cross-origin URLs)
