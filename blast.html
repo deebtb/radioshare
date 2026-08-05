@@ -574,14 +574,25 @@
             const confirmMsg = `Download "${show.name}" archive?\n\nThis will save the mp3 file to your device.`;
             if (!confirm(confirmMsg)) return;
 
-            // Create a temporary link to trigger the download
-            const a = document.createElement('a');
-            a.href = status.url;
-            a.download = `${show.handle}-archive.mp3`;
-            a.rel = 'noopener';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            // Fetch as blob to force a real download (download attr is ignored for cross-origin URLs)
+            fetch(status.url)
+                .then(resp => {
+                    if (!resp.ok) throw new Error('Download failed');
+                    return resp.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${show.handle}-archive.mp3`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                })
+                .catch(() => {
+                    alert('Download failed. The archive may have expired.');
+                });
         }
 
         function playShow(show, status) {
