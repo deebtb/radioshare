@@ -516,11 +516,14 @@
         <section>
             <div class="section-header">
                 <h2 class="section-title">All Stations</h2>
-                <label class="flac-toggle" id="flac-toggle-label">
-                    <input type="checkbox" id="flac-toggle">
-                    <span class="flac-toggle-slider"></span>
-                    <span class="flac-toggle-text">Show FLAC</span>
-                </label>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button class="refresh-meta-btn" id="refresh-all-meta-btn" aria-label="Refresh now playing info" title="Refresh now playing">🔄</button>
+                    <label class="flac-toggle" id="flac-toggle-label">
+                        <input type="checkbox" id="flac-toggle">
+                        <span class="flac-toggle-slider"></span>
+                        <span class="flac-toggle-text">Show FLAC</span>
+                    </label>
+                </div>
             </div>
             <div class="stations-grid" id="stations-grid"></div>
             <div class="no-results" id="no-results" hidden>No stations found.</div>
@@ -1391,6 +1394,10 @@
         });
 
         document.getElementById('refresh-meta-btn').addEventListener('click', () => {
+            refreshFavoritesMetadata();
+        });
+
+        document.getElementById('refresh-all-meta-btn').addEventListener('click', () => {
             refreshFavoritesMetadata();
         });
 
