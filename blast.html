@@ -100,6 +100,25 @@
             box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
         }
 
+        .download-btn {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .download-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
         .station-name {
             font-size: 1.1rem;
             font-weight: 700;
@@ -513,6 +532,21 @@
             card.appendChild(nameEl);
             card.appendChild(badge);
             card.appendChild(meta);
+
+            // Download button for archived shows
+            if (status && status.state === 'archived' && status.url) {
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'download-btn';
+                dlBtn.textContent = '💾';
+                dlBtn.setAttribute('aria-label', `Download ${show.name} archive`);
+                dlBtn.setAttribute('title', 'Download archive');
+                dlBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    downloadArchive(show, status);
+                });
+                card.appendChild(dlBtn);
+            }
+
             return card;
         }
 
@@ -534,6 +568,44 @@
             sorted.forEach(show => {
                 grid.appendChild(createCard(show, showStatuses[show.handle]));
             });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        function downloadArchive(show, status) {
+            // Estimate file size from duration (mp3 at 128kbps)
+            let sizeInfo = '';
+            if (status.start && status.end) {
+                const durationSec = status.end - status.start;
+                const estimatedBytes = durationSec * 128000 / 8;
+                sizeInfo = `\nEstimated size: ~${formatFileSize(estimatedBytes)}`;
+            }
+
+            const confirmMsg = `Download "${show.name}" archive?${sizeInfo}\n\nThis will save the mp3 file to your device.`;
+            if (!confirm(confirmMsg)) return;
+
+            // Fetch as blob to force a real download (download attr is ignored for cross-origin URLs)
+            fetch(status.url)
+                .then(resp => {
+                    if (!resp.ok) throw new Error('Download failed');
+                    return resp.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${show.handle}-archive.mp3`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                })
+                .catch(() => {
+                    alert('Download failed. The archive may have expired.');
+                });
         }
 
         function playShow(show, status) {
