@@ -516,11 +516,14 @@
         <section>
             <div class="section-header">
                 <h2 class="section-title">All Stations</h2>
-                <label class="flac-toggle" id="flac-toggle-label">
-                    <input type="checkbox" id="flac-toggle">
-                    <span class="flac-toggle-slider"></span>
-                    <span class="flac-toggle-text">Show FLAC</span>
-                </label>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button class="refresh-meta-btn" id="refresh-all-meta-btn" aria-label="Refresh now playing info" title="Refresh now playing">🔄</button>
+                    <label class="flac-toggle" id="flac-toggle-label">
+                        <input type="checkbox" id="flac-toggle">
+                        <span class="flac-toggle-slider"></span>
+                        <span class="flac-toggle-text">Show FLAC</span>
+                    </label>
+                </div>
             </div>
             <div class="stations-grid" id="stations-grid"></div>
             <div class="no-results" id="no-results" hidden>No stations found.</div>
@@ -751,18 +754,64 @@
         }
 
         // ICY metadata reader
+        // Streams that cannot provide inline metadata (no icy-metaint, no Ogg tags in browser)
+        const NO_METADATA_URLS = new Set([
+            'https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8', // Radio Calico HLS
+        ]);
+
+        // CORS proxy for ICY metadata — avoids preflight issues and exposes icy-metaint
+        const ICY_PROXY_URL = 'https://icy-proxy.deebeyondthebar.workers.dev';
+
+        // Debug logging — enable by adding ?debug to the URL
+        const DEBUG = new URLSearchParams(window.location.search).has('debug');
+        function debugLog(...args) { if (DEBUG) console.log(...args); }
+        function debugWarn(...args) { if (DEBUG) console.warn(...args); }
+        function debugError(...args) { if (DEBUG) console.error(...args); }
+
+        function proxyUrl(url) {
+            return `${ICY_PROXY_URL}/?url=${encodeURIComponent(url)}`;
+        }
+
+        function isOggStream(url) {
+            return url.endsWith('.ogg') || url.endsWith('.flac') ||
+                   url.includes('_FLAC') || url.includes('-FLAC') ||
+                   url.includes('/flac');
+        }
+
         function startMetadataReader(url) {
             if (metadataController) {
                 metadataController.abort();
             }
             metadataController = new AbortController();
 
-            fetch(url, {
-                headers: { 'Icy-MetaData': '1' },
+            if (NO_METADATA_URLS.has(url)) {
+                debugLog(`[meta] Skipping ${url} (no-metadata list)`);
+                return;
+            }
+
+            if (isOggStream(url)) {
+                debugLog(`[meta] Starting Ogg reader for ${url}`);
+                startOggMetadataReader(url, metadataController, (title) => {
+                    debugLog(`[meta] Ogg title found: "${title}" from ${url}`);
+                    nowPlayingTrack.textContent = title;
+                    checkTrackOverflow();
+                    updateMediaSession(currentStationName, title);
+                });
+                return;
+            }
+
+            // Use proxy to avoid CORS/preflight issues with Icy-MetaData header
+            const fetchUrl = proxyUrl(url);
+            debugLog(`[meta] Starting ICY reader via proxy for ${url}`);
+            fetch(fetchUrl, {
                 signal: metadataController.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
-                if (!metaint) return;
+                debugLog(`[meta] ICY response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                if (!metaint) {
+                    debugWarn(`[meta] No icy-metaint for ${url} — cannot read metadata`);
+                    return;
+                }
 
                 const reader = response.body.getReader();
                 let bytesUntilMeta = metaint;
@@ -833,7 +882,91 @@
                 }
 
                 reader.read().then(processChunk).catch(() => {});
+            }).catch((err) => {
+                if (err.name !== 'AbortError') {
+                    debugError(`[meta] ICY fetch error for ${url}:`, err.message);
+                }
+            });
+        }
+
+        // Ogg Vorbis comment reader — parses Ogg pages looking for comment headers
+        // Ogg streams (FLAC/Vorbis) embed metadata in page headers as Vorbis comments.
+        // We look for the pattern "ARTIST=..." and "TITLE=..." or "StreamTitle=..." in the raw stream.
+        function startOggMetadataReader(url, controller, onTitle) {
+            let lastTitle = '';
+            let accumulated = new Uint8Array(0);
+            const MAX_BUFFER = 262144; // 256KB max read before giving up per cycle
+
+            fetch(proxyUrl(url), {
+                signal: controller.signal
+            }).then(response => {
+                const reader = response.body.getReader();
+                let totalRead = 0;
+
+                function processChunk({ done, value }) {
+                    if (done) return;
+                    totalRead += value.length;
+
+                    // Append to buffer
+                    const newBuf = new Uint8Array(accumulated.length + value.length);
+                    newBuf.set(accumulated);
+                    newBuf.set(value, accumulated.length);
+                    accumulated = newBuf;
+
+                    // Try to extract Vorbis comments from buffer
+                    const title = extractOggTitle(accumulated);
+                    if (title && title !== lastTitle) {
+                        lastTitle = title;
+                        onTitle(title);
+                    }
+
+                    // Keep reading for continuous updates, but limit buffer size
+                    if (accumulated.length > MAX_BUFFER) {
+                        // Trim old data, keep last 64KB for boundary handling
+                        accumulated = accumulated.slice(accumulated.length - 65536);
+                    }
+
+                    reader.read().then(processChunk).catch(() => {});
+                }
+
+                reader.read().then(processChunk).catch(() => {});
             }).catch(() => {});
+        }
+
+        function extractOggTitle(buffer) {
+            // Look for Vorbis comment patterns in the raw bytes
+            // Vorbis comments contain "ARTIST=value" and "TITLE=value" as UTF-8 strings
+            const text = scanForVorbisComments(buffer);
+            if (text) return text;
+            return null;
+        }
+
+        function scanForVorbisComments(buffer) {
+            // Search for TITLE= and ARTIST= patterns in the byte stream
+            // These appear as length-prefixed UTF-8 strings in Vorbis comment blocks
+            const decoder = new TextDecoder('utf-8', { fatal: false });
+
+            let artist = '';
+            let title = '';
+
+            // Scan backwards for the most recent occurrence (metadata updates appear later in stream)
+            const str = decoder.decode(buffer);
+
+            // Look for case-insensitive TITLE= and ARTIST= tags
+            const titleMatches = [...str.matchAll(/TITLE=([^\x00-\x1f]{1,200})/gi)];
+            const artistMatches = [...str.matchAll(/ARTIST=([^\x00-\x1f]{1,200})/gi)];
+
+            if (titleMatches.length > 0) {
+                title = titleMatches[titleMatches.length - 1][1].trim();
+            }
+            if (artistMatches.length > 0) {
+                artist = artistMatches[artistMatches.length - 1][1].trim();
+            }
+
+            if (artist && title) return `${artist} - ${title}`;
+            if (title) return title;
+            if (artist) return artist;
+            return null;
         }
 
         function concatUint8Arrays(arrays) {
@@ -923,15 +1056,38 @@
         let peekControllers = [];
 
         function peekStationMetadata(url) {
+            if (NO_METADATA_URLS.has(url)) {
+                debugLog(`[peek] Skipping ${url} (no-metadata list)`);
+                return;
+            }
+
             const controller = new AbortController();
             peekControllers.push(controller);
 
-            fetch(url, {
-                headers: { 'Icy-MetaData': '1' },
+            // Timeout: abort after 10 seconds if no metadata found
+            const timeout = setTimeout(() => {
+                debugWarn(`[peek] Timeout for ${url} — no metadata found in 10s`);
+                controller.abort();
+            }, 10000);
+
+            if (isOggStream(url)) {
+                debugLog(`[peek] Starting Ogg peek for ${url}`);
+                peekOggMetadata(url, controller, timeout);
+                return;
+            }
+
+            debugLog(`[peek] Starting ICY peek via proxy for ${url}`);
+            fetch(proxyUrl(url), {
                 signal: controller.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
-                if (!metaint) { controller.abort(); return; }
+                debugLog(`[peek] Response for ${url}: metaint=${metaint}, status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                if (!metaint) {
+                    debugWarn(`[peek] No icy-metaint for ${url} — aborting`);
+                    clearTimeout(timeout);
+                    controller.abort();
+                    return;
+                }
 
                 const reader = response.body.getReader();
                 let bytesUntilMeta = metaint;
@@ -957,11 +1113,11 @@
                                 const match = metaStr.match(/StreamTitle='([^']*)'/);
                                 if (match && match[1]) {
                                     const title = match[1];
-                                    const song = title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title;
-                                    favTrackInfo[url] = song;
-                                    updateFavTrackDisplay(url, song);
+                                    favTrackInfo[url] = title;
+                                    updateFavTrackDisplay(url, title);
                                 }
                                 found = true;
+                                clearTimeout(timeout);
                                 controller.abort();
                                 return;
                             }
@@ -998,7 +1154,61 @@
                 }
 
                 reader.read().then(processChunk).catch(() => {});
-            }).catch(() => {});
+            }).catch((err) => {
+                clearTimeout(timeout);
+                if (err.name !== 'AbortError') {
+                    debugError(`[peek] ICY fetch error for ${url}:`, err.message);
+                }
+            });
+        }
+
+        function peekOggMetadata(url, controller, timeout) {
+            let accumulated = new Uint8Array(0);
+            const MAX_PEEK = 131072; // Read up to 128KB to find metadata
+
+            fetch(proxyUrl(url), {
+                signal: controller.signal
+            }).then(response => {
+                debugLog(`[peek-ogg] Response for ${url}: status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
+                const reader = response.body.getReader();
+                let totalRead = 0;
+
+                function processChunk({ done, value }) {
+                    if (done) { clearTimeout(timeout); debugLog(`[peek-ogg] Stream ended for ${url}, totalRead=${totalRead}`); return; }
+                    totalRead += value.length;
+
+                    const newBuf = new Uint8Array(accumulated.length + value.length);
+                    newBuf.set(accumulated);
+                    newBuf.set(value, accumulated.length);
+                    accumulated = newBuf;
+
+                    const title = extractOggTitle(accumulated);
+                    if (title) {
+                        debugLog(`[peek-ogg] Found title for ${url}: "${title}" (after ${totalRead} bytes)`);
+                        favTrackInfo[url] = title;
+                        updateFavTrackDisplay(url, title);
+                        clearTimeout(timeout);
+                        controller.abort();
+                        return;
+                    }
+
+                    if (totalRead >= MAX_PEEK) {
+                        debugWarn(`[peek-ogg] Max read reached for ${url} (${totalRead} bytes) — no metadata found`);
+                        clearTimeout(timeout);
+                        controller.abort();
+                        return;
+                    }
+
+                    reader.read().then(processChunk).catch(() => {});
+                }
+
+                reader.read().then(processChunk).catch(() => {});
+            }).catch((err) => {
+                clearTimeout(timeout);
+                if (err.name !== 'AbortError') {
+                    debugError(`[peek-ogg] Fetch error for ${url}:`, err.message);
+                }
+            });
         }
 
         function updateFavTrackDisplay(url, track) {
@@ -1013,12 +1223,13 @@
             peekControllers = [];
             favTrackInfo = {};
 
-            const favStations = stations.filter(s => isFavorite(s.url) && !isHidden(s.url));
-            const toPeek = favStations.slice(0, 10);
+            // Pre-fetch metadata for all visible stations (not just favorites)
+            const visible = getFiltered();
+            const toPeek = visible.slice(0, 20); // Limit to 20 concurrent peeks
 
             toPeek.forEach((station, i) => {
-                // Stagger requests by 200ms each
-                setTimeout(() => peekStationMetadata(station.url), i * 200);
+                // Stagger requests by 300ms each to avoid overwhelming servers
+                setTimeout(() => peekStationMetadata(station.url), i * 300);
             });
         }
         // --- End favorites metadata peek ---
@@ -1057,13 +1268,12 @@
             card.appendChild(hideBtn);
             card.appendChild(name);
 
-            if (showTrack) {
-                const track = document.createElement('span');
-                track.className = 'station-track';
-                track.setAttribute('data-track-url', station.url);
-                track.textContent = favTrackInfo[station.url] || '';
-                card.appendChild(track);
-            }
+            // Always show track info row
+            const track = document.createElement('span');
+            track.className = 'station-track';
+            track.setAttribute('data-track-url', station.url);
+            track.textContent = favTrackInfo[station.url] || '';
+            card.appendChild(track);
 
             return card;
         }
@@ -1190,6 +1400,10 @@
         });
 
         document.getElementById('refresh-meta-btn').addEventListener('click', () => {
+            refreshFavoritesMetadata();
+        });
+
+        document.getElementById('refresh-all-meta-btn').addEventListener('click', () => {
             refreshFavoritesMetadata();
         });
 
