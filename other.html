@@ -756,6 +756,13 @@
             'https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8', // Radio Calico HLS
         ]);
 
+        // CORS proxy for ICY metadata — avoids preflight issues and exposes icy-metaint
+        const ICY_PROXY_URL = 'https://icy-proxy.deebeyondthebar.workers.dev';
+
+        function proxyUrl(url) {
+            return `${ICY_PROXY_URL}/?url=${encodeURIComponent(url)}`;
+        }
+
         function isOggStream(url) {
             return url.endsWith('.ogg') || url.endsWith('.flac') ||
                    url.includes('_FLAC') || url.includes('-FLAC') ||
@@ -784,9 +791,10 @@
                 return;
             }
 
-            console.log(`[meta] Starting ICY reader for ${url}`);
-            fetch(url, {
-                headers: { 'Icy-MetaData': '1' },
+            // Use proxy to avoid CORS/preflight issues with Icy-MetaData header
+            const fetchUrl = proxyUrl(url);
+            console.log(`[meta] Starting ICY reader via proxy for ${url}`);
+            fetch(fetchUrl, {
                 signal: metadataController.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
@@ -880,7 +888,7 @@
             let accumulated = new Uint8Array(0);
             const MAX_BUFFER = 262144; // 256KB max read before giving up per cycle
 
-            fetch(url, {
+            fetch(proxyUrl(url), {
                 signal: controller.signal
             }).then(response => {
                 const reader = response.body.getReader();
@@ -1059,9 +1067,8 @@
                 return;
             }
 
-            console.log(`[peek] Starting ICY peek for ${url}`);
-            fetch(url, {
-                headers: { 'Icy-MetaData': '1' },
+            console.log(`[peek] Starting ICY peek via proxy for ${url}`);
+            fetch(proxyUrl(url), {
                 signal: controller.signal
             }).then(response => {
                 const metaint = parseInt(response.headers.get('icy-metaint'), 10);
@@ -1150,7 +1157,7 @@
             let accumulated = new Uint8Array(0);
             const MAX_PEEK = 131072; // Read up to 128KB to find metadata
 
-            fetch(url, {
+            fetch(proxyUrl(url), {
                 signal: controller.signal
             }).then(response => {
                 console.log(`[peek-ogg] Response for ${url}: status=${response.status}, headers:`, [...response.headers.entries()].map(([k,v]) => `${k}: ${v}`).join(', '));
