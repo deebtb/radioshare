@@ -98,6 +98,7 @@
     </div>
 
     <script src="tracker.js"></script>
+    <script src="saved-tracks.js"></script>
     <script>
         const STREAM_BASE = 'https://streaming.positivity.radio/tt/';
         const START_YEAR = 1950;
@@ -168,6 +169,17 @@
             nowPlaying.classList.remove('visible');
             document.body.classList.remove('has-player');
             render();
+        });
+
+        // Tap now-playing track to bookmark the song
+        nowPlayingTrack.style.cursor = 'pointer';
+        nowPlayingTrack.setAttribute('title', 'Tap to save this track');
+        nowPlayingTrack.addEventListener('click', () => {
+            const trackText = nowPlayingTrack.textContent.trim();
+            if (!trackText || trackText === 'Loading track info...') return;
+            const { artist, title } = parseTrackString(trackText);
+            saveTrack('TickTock ' + currentYear, artist, title);
+            showSaveToast();
         });
 
         document.getElementById('random-btn').addEventListener('click', () => {
