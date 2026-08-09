@@ -369,6 +369,7 @@
             <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
             <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
             <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
+            <a href="saved.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Saved</a>
         </nav>
 
         <div class="guest-picker" id="guest-picker"></div>
@@ -392,6 +393,7 @@
     </div>
 
     <script src="tracker.js"></script>
+    <script src="saved-tracks.js"></script>
     <script>
         const grid = document.getElementById('stations-grid');
         const searchInput = document.getElementById('search');
@@ -828,6 +830,17 @@
             nowPlaying.classList.remove('visible');
             document.body.classList.remove('has-player');
             render();
+        });
+
+        // Tap now-playing track to bookmark the song
+        nowPlayingTrack.style.cursor = 'pointer';
+        nowPlayingTrack.setAttribute('title', 'Tap to save this track');
+        nowPlayingTrack.addEventListener('click', () => {
+            const trackText = nowPlayingTrack.textContent.trim();
+            if (!trackText || trackText === 'Loading track info...') return;
+            const { artist, title } = parseTrackString(trackText);
+            saveTrack(currentStationName, artist, title);
+            showSaveToast();
         });
 
         document.getElementById('random-btn').addEventListener('click', () => {

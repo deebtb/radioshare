@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Saved Tracks</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2b6cb0;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .download-csv-btn {
+            background: #fbd38d;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #744210;
+            transition: background 0.2s;
+        }
+
+        .download-csv-btn:hover {
+            background: #f6e05e;
+        }
+
+        .track-count {
+            font-size: 0.8rem;
+            color: #bee3f8;
+            white-space: nowrap;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: #718096;
+        }
+
+        .empty-state .emoji {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state .hint {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .track-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .track-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: #fff;
+            border-radius: 10px;
+            padding: 0.85rem 1.25rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #1a202c;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-meta {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 0.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-time {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .remove-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            header h1 {
+                text-align: center;
+            }
+
+            .header-actions {
+                justify-content: center;
+            }
+
+            .track-row {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .track-time {
+                width: 100%;
+                order: 10;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎵 Saved Tracks</h1>
+        <div class="header-actions">
+            <button class="download-csv-btn" id="download-csv-btn" aria-label="Download saved tracks as CSV">📥 Download CSV</button>
+            <span class="track-count" id="track-count"></span>
+        </div>
+    </header>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Saved</span>
+        </nav>
+
+        <div id="content"></div>
+    </main>
+
+    <footer style="text-align: right; padding: 1rem 1.5rem; font-size: 0.7rem; color: #a0aec0;">v1.2.0</footer>
+
+    <script src="saved-tracks.js"></script>
+    <script>
+        const content = document.getElementById('content');
+        const trackCountEl = document.getElementById('track-count');
+        const downloadBtn = document.getElementById('download-csv-btn');
+
+        function formatTimestamp(iso) {
+            try {
+                const d = new Date(iso);
+                return new Intl.DateTimeFormat(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                }).format(d);
+            } catch {
+                return iso;
+            }
+        }
+
+        function render() {
+            const tracks = getSavedTracks();
+            trackCountEl.textContent = `${tracks.length} track${tracks.length !== 1 ? 's' : ''}`;
+
+            if (tracks.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">🎵</div>
+                        <p>No saved tracks yet</p>
+                        <p class="hint">Tap a song title in the now-playing bar while listening to save it here.</p>
+                    </div>
+                `;
+                downloadBtn.style.display = 'none';
+                return;
+            }
+
+            downloadBtn.style.display = '';
+
+            let html = '<div class="track-list">';
+            tracks.forEach((track, i) => {
+                const display = track.artist
+                    ? `${track.artist} — ${track.title}`
+                    : track.title;
+                html += `
+                    <div class="track-row">
+                        <div class="track-info">
+                            <div class="track-title">${escapeHtml(display)}</div>
+                            <div class="track-meta">${escapeHtml(track.station)}</div>
+                        </div>
+                        <span class="track-time">${formatTimestamp(track.timestamp)}</span>
+                        <button class="remove-btn" data-index="${i}" aria-label="Remove track" title="Remove">❌</button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            content.innerHTML = html;
+
+            // Attach remove listeners
+            content.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    removeTrack(idx);
+                    render();
+                });
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            const csv = exportTracksCSV();
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'saved-tracks.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        render();
+    </script>
+</body>
+</html>
