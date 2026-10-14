@@ -168,30 +168,124 @@ async function fetchBlastStatus(show) {
     }
 
     const raw = await resp.text();
+    // Unescape Next.js flight payload (quotes are backslash-escaped, & is \u0026)
     const text = raw.replaceAll('\\"', '"').replaceAll('\\u0026', '&');
 
-    const liveStreamMatch = text.match(
-      /"liveStream":\{[^}]*"id":"([^"]+)"[^}]*"url":"([^"]+)"[^}]*"mp3Url":(null|"[^"]*")[^}]*"wavUrl":(null|"[^"]*")[^}]*"start":(\d+)[^}]*"end":(\d+|null)[^}]*"isFinished":(true|false)/
-    );
-
-    if (!liveStreamMatch) {
-      return { handle: show.handle, state: 'none' };
-    }
-
-    const broadcastId = liveStreamMatch[1];
-    const mp3Url = liveStreamMatch[3] === 'null' ? null : liveStreamMatch[3].replace(/^"|"$/g, '');
-    const start = parseInt(liveStreamMatch[5], 10);
-    const end = liveStreamMatch[6] === 'null' ? null : parseInt(liveStreamMatch[6], 10);
-    const isFinished = liveStreamMatch[7] === 'true';
-
-    if (isFinished && mp3Url && mp3Url.startsWith('https://storage.googleapis.com')) {
-      return { handle: show.handle, state: 'archived', url: mp3Url, broadcastId, start, end };
-    }
-
-    return { handle: show.handle, state: isFinished ? 'expired' : 'live' };
+    return parseBlastStatus(show.handle, text);
   } catch (err) {
     return { handle: show.handle, state: 'error' };
   }
+}
+
+/**
+ * Parse broadcast state from an unescaped Next.js flight payload.
+ *
+ * Blast Radio moved finished broadcasts out of the `liveStream` object (now null
+ * when nothing is live) into a `recentStreams` array whose entries share the same
+ * field shape. We read both: a non-finished `liveStream` means the show is live;
+ * otherwise the newest `recentStreams` entry determines archived/expired.
+ *
+ * NOTE: this is a self-contained duplicate of the helper in blast-status.js so each
+ * file deploys as a standalone Cloudflare Worker. Keep the two copies in sync.
+ */
+function parseBlastStatus(handle, text) {
+  const liveStream = extractJsonValue(text, '"liveStream":');
+  const recentStreams = extractJsonValue(text, '"recentStreams":');
+
+  // Live: a current liveStream object that hasn't finished.
+  if (liveStream && typeof liveStream === 'object') {
+    const end = liveStream.end == null ? null : liveStream.end;
+    if (!liveStream.isFinished && end === null) {
+      return {
+        handle,
+        state: 'live',
+        url: liveStream.url,
+        broadcastId: liveStream.id,
+        start: liveStream.start,
+        listeners: liveStream.numberOfListeners == null ? null : liveStream.numberOfListeners,
+      };
+    }
+  }
+
+  // Otherwise fall back to the most recent finished broadcast.
+  const recent = Array.isArray(recentStreams) && recentStreams.length ? recentStreams[0] : null;
+  if (recent) {
+    const mp3Url = recent.mp3Url || null;
+    const start = recent.start == null ? null : recent.start;
+    const end = recent.end == null ? null : recent.end;
+
+    if (recent.isFinished && mp3Url && mp3Url.startsWith('https://storage.googleapis.com')) {
+      return {
+        handle,
+        state: 'archived',
+        url: mp3Url,
+        wavUrl: recent.wavUrl || null,
+        broadcastId: recent.id,
+        start,
+        end,
+      };
+    }
+
+    return {
+      handle,
+      state: 'expired',
+      broadcastId: recent.id,
+      start,
+      end,
+    };
+  }
+
+  // Nothing live and nothing recent.
+  if (text.includes('"availableBroadcastsCount":0')) {
+    return { handle, state: 'none', message: 'Never broadcast' };
+  }
+  return { handle, state: 'none', message: 'No broadcast data found' };
+}
+
+/**
+ * Find the JSON value immediately following `key` in `text` and parse it.
+ * Handles a null literal or a balanced {...} / [...] value (respecting strings
+ * and escapes). Returns the parsed value, or null if absent/unparseable.
+ */
+function extractJsonValue(text, key) {
+  const keyIdx = text.indexOf(key);
+  if (keyIdx === -1) return null;
+
+  let i = keyIdx + key.length;
+  // Skip any whitespace between the colon and the value.
+  while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\t' || text[i] === '\r')) {
+    i++;
+  }
+
+  if (text.startsWith('null', i)) return null;
+
+  const openChar = text[i];
+  if (openChar !== '{' && openChar !== '[') return null;
+  const closeChar = openChar === '{' ? '}' : ']';
+
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let j = i; j < text.length; j++) {
+    const c = text[j];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === openChar) {
+      depth++;
+    } else if (c === closeChar) {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(i, j + 1));
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function corsHeaders() {

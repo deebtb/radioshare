@@ -62,64 +62,56 @@ async function fetchBlastStatus(handle) {
 
     const raw = await resp.text();
 
-    // Unescape Next.js flight payload
+    // Unescape Next.js flight payload (quotes are backslash-escaped, & is \u0026)
     const text = raw.replaceAll('\\"', '"').replaceAll('\\u0026', '&');
 
-    // Extract status summary
-    const statusMatch = text.match(
-      /"availableBroadcastsCount":(\d+),"expiredBroadcastsCount":(-?\d+|null),"isLive":(true|false),"totalBroadcastsCount":(\d+|null)/
-    );
+    return parseBlastStatus(handle, text);
+  } catch (err) {
+    return { handle, state: 'error', error: err.message };
+  }
+}
 
-    // Extract liveStream object fields
-    const liveStreamMatch = text.match(
-      /"liveStream":\{[^}]*"id":"([^"]+)"[^}]*"url":"([^"]+)"[^}]*"mp3Url":(null|"[^"]*")[^}]*"wavUrl":(null|"[^"]*")[^}]*"start":(\d+)[^}]*"end":(\d+|null)[^}]*"isFinished":(true|false)/
-    );
+/**
+ * Parse broadcast state from an unescaped Next.js flight payload.
+ *
+ * Blast Radio moved finished broadcasts out of the `liveStream` object (now null
+ * when nothing is live) into a `recentStreams` array whose entries share the same
+ * field shape. We read both: a non-finished `liveStream` means the show is live;
+ * otherwise the newest `recentStreams` entry determines archived/expired.
+ */
+function parseBlastStatus(handle, text) {
+  const liveStream = extractJsonValue(text, '"liveStream":');
+  const recentStreams = extractJsonValue(text, '"recentStreams":');
 
-    if (!statusMatch && !liveStreamMatch) {
-      // Check if user exists but never broadcast
-      if (text.includes('"availableBroadcastsCount":0')) {
-        return { handle, state: 'none', message: 'Never broadcast' };
-      }
-      return { handle, state: 'none', message: 'No broadcast data found' };
-    }
-
-    const isLive = statusMatch ? statusMatch[3] === 'true' : false;
-
-    if (!liveStreamMatch) {
-      return {
-        handle,
-        state: isLive ? 'live' : 'none',
-        message: 'Status detected but no stream details found',
-      };
-    }
-
-    const broadcastId = liveStreamMatch[1];
-    const streamUrl = liveStreamMatch[2];
-    const mp3Url = liveStreamMatch[3] === 'null' ? null : liveStreamMatch[3].replace(/^"|"$/g, '');
-    const wavUrl = liveStreamMatch[4] === 'null' ? null : liveStreamMatch[4].replace(/^"|"$/g, '');
-    const start = parseInt(liveStreamMatch[5], 10);
-    const end = liveStreamMatch[6] === 'null' ? null : parseInt(liveStreamMatch[6], 10);
-    const isFinished = liveStreamMatch[7] === 'true';
-
-    // Determine state
-    if (!isFinished && end === null) {
+  // Live: a current liveStream object that hasn't finished.
+  if (liveStream && typeof liveStream === 'object') {
+    const end = liveStream.end == null ? null : liveStream.end;
+    if (!liveStream.isFinished && end === null) {
       return {
         handle,
         state: 'live',
-        url: streamUrl,
-        broadcastId,
-        start,
-        listeners: extractListeners(text),
+        url: liveStream.url,
+        broadcastId: liveStream.id,
+        start: liveStream.start,
+        listeners: liveStream.numberOfListeners == null ? null : liveStream.numberOfListeners,
       };
     }
+  }
 
-    if (mp3Url && mp3Url.startsWith('https://storage.googleapis.com')) {
+  // Otherwise fall back to the most recent finished broadcast.
+  const recent = Array.isArray(recentStreams) && recentStreams.length ? recentStreams[0] : null;
+  if (recent) {
+    const mp3Url = recent.mp3Url || null;
+    const start = recent.start == null ? null : recent.start;
+    const end = recent.end == null ? null : recent.end;
+
+    if (recent.isFinished && mp3Url && mp3Url.startsWith('https://storage.googleapis.com')) {
       return {
         handle,
         state: 'archived',
         url: mp3Url,
-        wavUrl,
-        broadcastId,
+        wavUrl: recent.wavUrl || null,
+        broadcastId: recent.id,
         start,
         end,
       };
@@ -128,19 +120,63 @@ async function fetchBlastStatus(handle) {
     return {
       handle,
       state: 'expired',
-      broadcastId,
+      broadcastId: recent.id,
       start,
       end,
     };
-
-  } catch (err) {
-    return { handle, state: 'error', error: err.message };
   }
+
+  // Nothing live and nothing recent.
+  if (text.includes('"availableBroadcastsCount":0')) {
+    return { handle, state: 'none', message: 'Never broadcast' };
+  }
+  return { handle, state: 'none', message: 'No broadcast data found' };
 }
 
-function extractListeners(text) {
-  const match = text.match(/"numberOfListeners":(\d+)/);
-  return match ? parseInt(match[1], 10) : null;
+/**
+ * Find the JSON value immediately following `key` in `text` and parse it.
+ * Handles a null literal or a balanced {...} / [...] value (respecting strings
+ * and escapes). Returns the parsed value, or null if absent/unparseable.
+ */
+function extractJsonValue(text, key) {
+  const keyIdx = text.indexOf(key);
+  if (keyIdx === -1) return null;
+
+  let i = keyIdx + key.length;
+  // Skip any whitespace between the colon and the value.
+  while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\t' || text[i] === '\r')) {
+    i++;
+  }
+
+  if (text.startsWith('null', i)) return null;
+
+  const openChar = text[i];
+  if (openChar !== '{' && openChar !== '[') return null;
+  const closeChar = openChar === '{' ? '}' : ']';
+
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let j = i; j < text.length; j++) {
+    const c = text[j];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === openChar) {
+      depth++;
+    } else if (c === closeChar) {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(i, j + 1));
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function corsHeaders() {
