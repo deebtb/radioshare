@@ -119,6 +119,25 @@
             transform: scale(1.2);
         }
 
+        .copy-link-btn {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 2.5rem;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .copy-link-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
         .station-name {
             font-size: 1.1rem;
             font-weight: 700;
@@ -537,6 +556,17 @@
 
             // Download button for archived shows
             if (status && status.state === 'archived' && status.url) {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-link-btn';
+                copyBtn.textContent = '🔗';
+                copyBtn.setAttribute('aria-label', `Copy ${show.name} stream link`);
+                copyBtn.setAttribute('title', 'Copy direct stream link');
+                copyBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    copyStreamLink(show, status);
+                });
+                card.appendChild(copyBtn);
+
                 const dlBtn = document.createElement('button');
                 dlBtn.className = 'download-btn';
                 dlBtn.textContent = '💾';
@@ -575,6 +605,15 @@
         function formatFileSize(bytes) {
             if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
             return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        function copyStreamLink(show, status) {
+            navigator.clipboard.writeText(status.url).then(() => {
+                showToast(`🔗 ${show.name} stream link copied`);
+            }).catch(() => {
+                // Fallback: open the stream URL in a new tab
+                window.open(status.url, '_blank');
+            });
         }
 
         function downloadArchive(show, status) {
