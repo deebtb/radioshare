@@ -133,6 +133,11 @@
             line-height: 1;
         }
 
+        /* When there's no download button beside it (live shows), sit flush right */
+        .copy-link-btn.solo {
+            right: 0.75rem;
+        }
+
         .copy-link-btn:hover {
             opacity: 1;
             transform: scale(1.2);
@@ -554,19 +559,24 @@
             card.appendChild(badge);
             card.appendChild(meta);
 
-            // Download button for archived shows
-            if (status && status.state === 'archived' && status.url) {
+            // Copy direct stream link — for both live and archived shows
+            if (status && (status.state === 'live' || status.state === 'archived') && status.url) {
                 const copyBtn = document.createElement('button');
-                copyBtn.className = 'copy-link-btn';
+                // Live shows have no download button, so the copy button sits flush right
+                copyBtn.className = 'copy-link-btn' + (status.state === 'live' ? ' solo' : '');
                 copyBtn.textContent = '🔗';
-                copyBtn.setAttribute('aria-label', `Copy ${show.name} stream link`);
-                copyBtn.setAttribute('title', 'Copy direct stream link');
+                const linkLabel = status.state === 'live' ? 'live stream' : 'stream';
+                copyBtn.setAttribute('aria-label', `Copy ${show.name} ${linkLabel} link`);
+                copyBtn.setAttribute('title', status.state === 'live' ? 'Copy live stream link' : 'Copy direct stream link');
                 copyBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     copyStreamLink(show, status);
                 });
                 card.appendChild(copyBtn);
+            }
 
+            // Download button — archived shows only (can't download an in-progress stream)
+            if (status && status.state === 'archived' && status.url) {
                 const dlBtn = document.createElement('button');
                 dlBtn.className = 'download-btn';
                 dlBtn.textContent = '💾';
@@ -608,8 +618,9 @@
         }
 
         function copyStreamLink(show, status) {
+            const kind = status.state === 'live' ? 'live stream' : 'stream';
             navigator.clipboard.writeText(status.url).then(() => {
-                showToast(`🔗 ${show.name} stream link copied`);
+                showToast(`🔗 ${show.name} ${kind} link copied`);
             }).catch(() => {
                 // Fallback: open the stream URL in a new tab
                 window.open(status.url, '_blank');
