@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Blast Radio Archive</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #2b6cb0;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid #2c5282;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: clamp(1.2rem, 3vw, 1.75rem);
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .refresh-btn {
+            background: #fbd38d;
+            border: none;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.2) rotate(15deg);
+            background: #f6e05e;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .expiry-note {
+            background: #fefcbf;
+            color: #975a16;
+            border: 1px solid #f6e05e;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        .dj-group {
+            margin-bottom: 2rem;
+        }
+
+        .dj-title {
+            font-size: 1.25rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .dj-title .dj-count {
+            font-size: 0.8rem;
+            color: #a0aec0;
+            font-weight: 400;
+        }
+
+        .shows-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .show-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .show-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.15);
+            border-color: #63b3ed;
+        }
+
+        .show-card.playing {
+            border-color: #276749;
+            background: #f0fff4;
+            box-shadow: 0 0 12px rgba(39, 103, 73, 0.2);
+        }
+
+        .show-date {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .show-meta {
+            font-size: 0.8rem;
+            color: #718096;
+        }
+
+        .show-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .action-btn {
+            background: #ebf8ff;
+            border: 1px solid #bee3f8;
+            color: #2b6cb0;
+            border-radius: 8px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+            line-height: 1;
+        }
+
+        .action-btn:hover {
+            background: #bee3f8;
+            transform: scale(1.05);
+        }
+
+        .action-btn.playing {
+            background: #c6f6d5;
+            border-color: #9ae6b4;
+            color: #276749;
+        }
+
+        .empty-state {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2.5rem 1.5rem;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            color: #718096;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .empty-state strong {
+            display: block;
+            font-size: 1.1rem;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .now-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a365d;
+            border-top: 3px solid #2b6cb0;
+            padding: 1rem 2rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            z-index: 100;
+        }
+
+        .now-playing.visible {
+            display: flex;
+        }
+
+        .now-playing-station {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 1rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .now-playing-status {
+            color: #fbd38d;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .stop-btn {
+            padding: 0.5rem 1rem;
+            background: #c53030;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stop-btn:hover {
+            background: #9b2c2c;
+        }
+
+        .progress-bar {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .progress-bar.visible {
+            display: flex;
+        }
+
+        .progress-time {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            min-width: 3.2em;
+        }
+
+        .progress-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #2d3748;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fbd38d;
+            cursor: pointer;
+        }
+
+        .progress-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fbd38d;
+            border: none;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            .shows-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            header h1 {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .now-playing {
+                flex-wrap: wrap;
+                padding: 0.75rem 1rem;
+            }
+
+            .progress-bar {
+                width: 100%;
+                order: 10;
+            }
+        }
+
+        body.has-player main {
+            padding-bottom: 6rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🗄️ Blast Radio Archive</h1>
+        <button class="refresh-btn" id="refresh-btn" aria-label="Refresh archive" title="Refresh">🔄</button>
+    </header>
+
+    <main>
+        <nav style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+            <strong style="color: #2b6cb0; font-size: 0.85rem; margin-right: 0.25rem;">Stations:</strong>
+            <a href="index.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Radio</a>
+            <a href="guestpicks.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Exclusive Guest Picks</a>
+            <a href="bob.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Radio BOB</a>
+            <a href="other.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Other Stations</a>
+            <a href="presets.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Genre Presets</a>
+            <a href="blast.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Blast Radio</a>
+            <a href="years.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Music by Year</a>
+            <a href="saved.html" style="padding: 0.35rem 0.85rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-decoration: none; border: 1px solid #bee3f8;">Saved</a>
+            <span style="padding: 0.35rem 0.85rem; background: #2b6cb0; color: #fff; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">Archive</span>
+        </nav>
+
+        <div class="expiry-note">
+            ⚠️ Listen and download links point to Blast Radio's own storage and may stop
+            working once Blast expires an archive. The show metadata and history shown here is
+            retained regardless.
+        </div>
+
+        <div id="content"></div>
+    </main>
+
+    <footer style="text-align: right; padding: 1rem 1.5rem; font-size: 0.7rem; color: #a0aec0;">v1.2.0</footer>
+
+    <div class="now-playing" id="now-playing">
+        <button class="stop-btn" id="stop-btn" aria-label="Stop playback">⏹ Stop</button>
+        <span class="now-playing-station" id="now-playing-station"></span>
+        <span class="now-playing-status" id="now-playing-status"></span>
+        <div class="progress-bar" id="progress-bar">
+            <span class="progress-time" id="progress-current">0:00</span>
+            <input type="range" class="progress-slider" id="progress-slider" min="0" max="100" value="0" step="0.1" aria-label="Seek position">
+            <span class="progress-time" id="progress-duration">0:00</span>
+        </div>
+    </div>
+
+    <div id="toast" style="position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%); background: #2d3748; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200;">
+    </div>
+
+    <script src="tracker.js"></script>
+    <script>
+        // --- Configuration ---
+        // Read API for captured archive history. Change this to your Worker URL once
+        // deployed (workers.dev subdomain or a custom route).
+        const WORKER_URL = 'https://blast-archiver.deebeyondthebar.workers.dev';
+
+        const content = document.getElementById('content');
+        const nowPlaying = document.getElementById('now-playing');
+        const nowPlayingStation = document.getElementById('now-playing-station');
+        const nowPlayingStatus = document.getElementById('now-playing-status');
+        const stopBtn = document.getElementById('stop-btn');
+
+        let audio = null;
+        let currentId = null; // broadcast_id currently playing
+        let shows = [];       // raw rows from the worker
+
+        const progressBar = document.getElementById('progress-bar');
+        const progressSlider = document.getElementById('progress-slider');
+        const progressCurrent = document.getElementById('progress-current');
+        const progressDuration = document.getElementById('progress-duration');
+        let isSeeking = false;
+
+        function formatDuration(seconds) {
+            if (!seconds || !isFinite(seconds)) return '0:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        const dateFmt = new Intl.DateTimeFormat(undefined, {
+            month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+        });
+
+        function formatDate(unixSec) {
+            if (!unixSec) return 'Unknown date';
+            return dateFmt.format(new Date(unixSec * 1000));
+        }
+
+        function showProgressBar(show) {
+            if (show) {
+                progressBar.classList.add('visible');
+            } else {
+                progressBar.classList.remove('visible');
+                progressSlider.value = 0;
+                progressCurrent.textContent = '0:00';
+                progressDuration.textContent = '0:00';
+            }
+        }
+
+        progressSlider.addEventListener('input', () => {
+            isSeeking = true;
+            if (audio && isFinite(audio.duration)) {
+                const seekTime = (progressSlider.value / 100) * audio.duration;
+                progressCurrent.textContent = formatDuration(seekTime);
+            }
+        });
+
+        progressSlider.addEventListener('change', () => {
+            if (audio && isFinite(audio.duration)) {
+                audio.currentTime = (progressSlider.value / 100) * audio.duration;
+            }
+            isSeeking = false;
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+        }
+
+        // Group shows by handle. Group order = most-recent show first (max start_ts
+        // DESC); within a group, reverse-chronological by start_ts.
+        function groupByDj(rows) {
+            const groups = new Map();
+            for (const row of rows) {
+                if (!groups.has(row.handle)) {
+                    groups.set(row.handle, {
+                        handle: row.handle,
+                        name: row.show_name || row.handle,
+                        shows: [],
+                    });
+                }
+                groups.get(row.handle).shows.push(row);
+            }
+            const list = [...groups.values()];
+            for (const g of list) {
+                g.shows.sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
+                g.maxStart = g.shows.length ? (g.shows[0].start_ts || 0) : 0;
+            }
+            list.sort((a, b) => b.maxStart - a.maxStart);
+            return list;
+        }
+
+        function render() {
+            content.innerHTML = '';
+
+            if (!shows.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.innerHTML = '<strong>No archived shows captured yet</strong>' +
+                    'The archive fills in over time. We poll the Blast DJs every 12 hours and ' +
+                    'record each newly-seen archived show here. Check back after a few broadcasts.';
+                content.appendChild(empty);
+                return;
+            }
+
+            const groups = groupByDj(shows);
+            for (const group of groups) {
+                const section = document.createElement('div');
+                section.className = 'dj-group';
+
+                const title = document.createElement('h2');
+                title.className = 'dj-title';
+                const count = group.shows.length;
+                title.innerHTML = `${escapeHtml(group.name)} ` +
+                    `<span class="dj-count">${count} show${count !== 1 ? 's' : ''}</span>`;
+                section.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'shows-grid';
+                for (const show of group.shows) {
+                    grid.appendChild(createCard(group, show));
+                }
+                section.appendChild(grid);
+                content.appendChild(section);
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function createCard(group, show) {
+            const card = document.createElement('div');
+            card.className = 'show-card' + (currentId === show.broadcast_id ? ' playing' : '');
+
+            const dateEl = document.createElement('div');
+            dateEl.className = 'show-date';
+            dateEl.textContent = formatDate(show.start_ts);
+            card.appendChild(dateEl);
+
+            const meta = document.createElement('div');
+            meta.className = 'show-meta';
+            const parts = [];
+            if (show.duration) parts.push(formatDuration(show.duration));
+            if (show.listeners != null) {
+                parts.push(`${show.listeners} listener${show.listeners !== 1 ? 's' : ''}`);
+            }
+            meta.textContent = parts.join(' · ');
+            card.appendChild(meta);
+
+            const actions = document.createElement('div');
+            actions.className = 'show-actions';
+
+            // ▶ Listen (toggle via now-playing bar)
+            const listenBtn = document.createElement('button');
+            listenBtn.className = 'action-btn' + (currentId === show.broadcast_id ? ' playing' : '');
+            listenBtn.textContent = currentId === show.broadcast_id ? '⏸ Playing' : '▶ Listen';
+            listenBtn.setAttribute('aria-label', `Listen to ${group.name} from ${formatDate(show.start_ts)}`);
+            listenBtn.addEventListener('click', () => playShow(group, show));
+            actions.appendChild(listenBtn);
+
+            // 💾 Download
+            const dlBtn = document.createElement('button');
+            dlBtn.className = 'action-btn';
+            dlBtn.textContent = '💾 Download';
+            dlBtn.setAttribute('aria-label', `Download ${group.name} archive`);
+            dlBtn.addEventListener('click', () => downloadArchive(group, show));
+            actions.appendChild(dlBtn);
+
+            // 🔗 Copy link
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'action-btn';
+            copyBtn.textContent = '🔗 Copy link';
+            copyBtn.setAttribute('aria-label', `Copy ${group.name} stream link`);
+            copyBtn.addEventListener('click', () => copyStreamLink(group, show));
+            actions.appendChild(copyBtn);
+
+            card.appendChild(actions);
+            return card;
+        }
+
+        function copyStreamLink(group, show) {
+            if (!show.mp3_url) {
+                showToast('No link available for this show');
+                return;
+            }
+            navigator.clipboard.writeText(show.mp3_url).then(() => {
+                showToast(`🔗 ${group.name} stream link copied`);
+            }).catch(() => {
+                window.open(show.mp3_url, '_blank');
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        function downloadArchive(group, show) {
+            if (!show.mp3_url) {
+                alert('No download link available for this show.');
+                return;
+            }
+
+            let sizeInfo = '';
+            if (show.duration) {
+                const estimatedBytes = show.duration * 128000 / 8;
+                sizeInfo = `\nEstimated size: ~${formatFileSize(estimatedBytes)}`;
+            }
+
+            const confirmMsg = `Download "${group.name}" archive from ${formatDate(show.start_ts)}?${sizeInfo}\n\nThis will save the mp3 file to your device.`;
+            if (!confirm(confirmMsg)) return;
+
+            // Fetch as blob to force a real download (download attr is ignored for cross-origin URLs)
+            fetch(show.mp3_url)
+                .then(resp => {
+                    if (!resp.ok) throw new Error('Download failed');
+                    return resp.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${show.handle}-${show.start_ts}.mp3`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                })
+                .catch(() => {
+                    alert('Download failed. The archive may have expired.');
+                });
+        }
+
+        function playShow(group, show) {
+            if (audio) { audio.pause(); audio = null; }
+
+            if (currentId === show.broadcast_id) {
+                currentId = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                showProgressBar(false);
+                render();
+                return;
+            }
+
+            if (!show.mp3_url) {
+                alert('No playable link available for this show.');
+                return;
+            }
+
+            audio = new Audio(show.mp3_url);
+
+            audio.addEventListener('loadedmetadata', () => {
+                if (isFinite(audio.duration)) {
+                    progressDuration.textContent = formatDuration(audio.duration);
+                    progressSlider.max = 100;
+                    showProgressBar(true);
+                }
+            });
+
+            audio.addEventListener('timeupdate', () => {
+                if (!isSeeking && isFinite(audio.duration) && audio.duration > 0) {
+                    const pct = (audio.currentTime / audio.duration) * 100;
+                    progressSlider.value = pct;
+                    progressCurrent.textContent = formatDuration(audio.currentTime);
+                }
+            });
+
+            audio.addEventListener('ended', () => {
+                currentId = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                showProgressBar(false);
+                render();
+            });
+
+            audio.play().catch(() => {
+                alert('Unable to play this archive. The link may have expired.');
+                currentId = null;
+                nowPlaying.classList.remove('visible');
+                document.body.classList.remove('has-player');
+                showProgressBar(false);
+                render();
+            });
+
+            currentId = show.broadcast_id;
+            if (typeof trackPlay === 'function') trackPlay(group.name, 'blast-archive');
+            nowPlayingStation.textContent = `🗄️ ${group.name}`;
+            nowPlayingStatus.textContent = `Archive · ${formatDate(show.start_ts)}`;
+            nowPlaying.classList.add('visible');
+            document.body.classList.add('has-player');
+            render();
+        }
+
+        stopBtn.addEventListener('click', () => {
+            if (audio) { audio.pause(); audio = null; }
+            currentId = null;
+            nowPlaying.classList.remove('visible');
+            document.body.classList.remove('has-player');
+            showProgressBar(false);
+            render();
+        });
+
+        async function fetchArchive() {
+            try {
+                const resp = await fetch(WORKER_URL);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                shows = Array.isArray(data) ? data : [];
+            } catch (err) {
+                console.error('Failed to fetch archive:', err);
+                content.innerHTML = '<div class="empty-state">' +
+                    '<strong>Couldn\'t load the archive</strong>' +
+                    'The archive service is unreachable right now. Try the refresh button in a moment.' +
+                    '</div>';
+                return;
+            }
+            render();
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            fetchArchive();
+        });
+
+        // Initial load
+        fetchArchive();
+    </script>
+</body>
+</html>
