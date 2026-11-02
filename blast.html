@@ -416,26 +416,90 @@
         // After route setup: '/api/blast'
         const WORKER_URL = 'https://blast-status.deebeyondthebar.workers.dev';
 
-        const SHOWS = [
-            { handle: 'deepspaceradio', name: 'Deep Space Radio' },
-            { handle: 'getrocked', name: 'Get Rocked 🎸' },
-            { handle: 'richpasternack', name: 'Rich Pasternack 🐐' },
-            { handle: 'lemmytellya73', name: 'Lemmy 🔊' },
-            { handle: 'jaydeerothmeyer', name: 'jdr 🐹' },
-            { handle: 'moshradio', name: 'MOSH 🤘' },
-            { handle: 'uncledandy', name: 'Uncle Dandy' },
-            { handle: 'intheboxnate', name: 'Nate 🐻‍❄️' },
-            { handle: 'trentkellyonthewaveshow', name: 'Trent Kelly 🪐' },
-            { handle: 'beyondthebar', name: 'Beyond the Bar 🍸' },
-            { handle: 'oldhead', name: 'Oldhead' },
-            { handle: '5yn7axradio', name: 'Syntax' },
-            { handle: 'radioted57', name: 'Radio Ted 🎙️' },
-            { handle: 'johntt', name: 'John TT' },
-            { handle: 'lostmember', name: 'Losto 🦘' },
-            { handle: 'thx138', name: 'Wolf Mark' },
-            { handle: 'xirtic', name: 'Stray Topix' },
-            { handle: 'nwobhm', name: 'New Wave Brit Metal' },
-        ];
+        // Show list lives in streams/blast-shows.csv (handle,name,display_name).
+        // Loaded at startup; each entry is { handle, name } where name is the
+        // emoji display_name used for card titles and now-playing text.
+        const SHOWS_CSV_URL = 'streams/blast-shows.csv';
+        let SHOWS = [];
+
+        // blast-status rejects requests with more than 20 handles, so status
+        // lookups are split into batches of this size and merged.
+        const STATUS_BATCH_SIZE = 20;
+
+        // Split one CSV line into fields. Supports quoted fields with "" escapes.
+        function splitCSVLine(line) {
+            const fields = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (inQuotes) {
+                    if (char === '"' && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else if (char === '"') {
+                        inQuotes = false;
+                    } else {
+                        current += char;
+                    }
+                } else if (char === '"') {
+                    inQuotes = true;
+                } else if (char === ',') {
+                    fields.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            fields.push(current.trim());
+            return fields;
+        }
+
+        // Parse blast-shows.csv into [{ handle, name, display_name }].
+        // Tolerates CRLF line endings, a BOM, blank lines and a trailing newline.
+        function parseShowsCSV(text) {
+            const lines = String(text || '').replace(/^\uFEFF/, '')
+                .replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const header = splitCSVLine(lines[0] || '').map(h => h.toLowerCase());
+            const hi = header.indexOf('handle');
+            const ni = header.indexOf('name');
+            const di = header.indexOf('display_name');
+            if (hi === -1) return [];
+
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const fields = splitCSVLine(line);
+                const handle = fields[hi];
+                if (!handle) continue;
+                rows.push({
+                    handle,
+                    name: (ni === -1 ? '' : fields[ni]) || '',
+                    display_name: (di === -1 ? '' : fields[di]) || '',
+                });
+            }
+            return rows;
+        }
+
+        async function loadShows() {
+            const resp = await fetch(SHOWS_CSV_URL);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const shows = parseShowsCSV(await resp.text()).map(row => ({
+                handle: row.handle,
+                name: row.display_name || row.name || row.handle,
+            }));
+            if (!shows.length) throw new Error('Show list is empty');
+            return shows;
+        }
+
+        function chunk(items, size) {
+            const batches = [];
+            for (let i = 0; i < items.length; i += size) {
+                batches.push(items.slice(i, i + size));
+            }
+            return batches;
+        }
 
         const grid = document.getElementById('stations-grid');
         const nowPlaying = document.getElementById('now-playing');
@@ -737,10 +801,10 @@
             render();
         });
 
-        async function fetchStatuses() {
-            const handles = SHOWS.map(s => s.handle).join(',');
+        // Fetch statuses for one batch of handles (at most STATUS_BATCH_SIZE).
+        async function fetchStatusBatch(handles) {
             try {
-                const resp = await fetch(`${WORKER_URL}?handle=${handles}`);
+                const resp = await fetch(`${WORKER_URL}?handle=${handles.map(encodeURIComponent).join(',')}`);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const data = await resp.json();
 
@@ -755,24 +819,61 @@
                 }
             } catch (err) {
                 console.error('Failed to fetch blast statuses:', err);
-                SHOWS.forEach(show => {
-                    if (!showStatuses[show.handle]) {
-                        showStatuses[show.handle] = { handle: show.handle, state: 'error', error: 'Network error' };
+                handles.forEach(handle => {
+                    if (!showStatuses[handle]) {
+                        showStatuses[handle] = { handle, state: 'error', error: 'Network error' };
                     }
                 });
             }
+        }
+
+        async function fetchStatuses() {
+            const batches = chunk(SHOWS.map(s => s.handle), STATUS_BATCH_SIZE);
+            await Promise.all(batches.map(fetchStatusBatch));
             render();
+        }
+
+        // Shown in place of the cards when the show list can't be loaded.
+        function renderLoadError() {
+            grid.innerHTML = '';
+            const card = document.createElement('div');
+            card.className = 'station-card';
+            const badge = document.createElement('span');
+            badge.className = 'status-badge status-error';
+            badge.textContent = 'Error';
+            const meta = document.createElement('div');
+            meta.className = 'station-meta';
+            meta.textContent = 'Could not load the show list. Try refreshing.';
+            card.appendChild(badge);
+            card.appendChild(meta);
+            grid.appendChild(card);
+        }
+
+        async function init() {
+            try {
+                SHOWS = await loadShows();
+            } catch (err) {
+                console.error('Failed to load blast show list:', err);
+                renderLoadError();
+                return;
+            }
+            render();
+            fetchStatuses();
         }
 
         document.getElementById('refresh-btn').addEventListener('click', () => {
             showStatuses = {};
+            if (!SHOWS.length) {
+                // Show list never loaded; retry it before fetching statuses.
+                init();
+                return;
+            }
             render();
             fetchStatuses();
         });
 
-        // Initial load
-        render();
-        fetchStatuses();
+        // Initial load: show list first, then statuses
+        init();
 
         // Poll every 60 seconds while any show is live
         let pollInterval = null;

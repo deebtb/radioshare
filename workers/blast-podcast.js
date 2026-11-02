@@ -12,7 +12,13 @@
  *        Returns: application/rss+xml podcast feed
  */
 
-const SHOWS = [
+// Source of truth for the show list: streams/blast-shows.csv on the site
+// (columns handle,name,display_name). This worker uses the plain `name` column.
+const SHOWS_CSV_URL = 'https://deeradio.uk/streams/blast-shows.csv';
+
+// Built-in fallback, used ONLY if the CSV fetch fails or returns no rows.
+// It may be out of date; edit streams/blast-shows.csv instead of this list.
+const FALLBACK_SHOWS = [
   { handle: 'deepspaceradio', name: 'Deep Space Radio' },
   { handle: 'getrocked', name: 'Get Rocked' },
   { handle: 'richpasternack', name: 'Rich Pasternack' },
@@ -48,14 +54,16 @@ export default {
     }
 
     try {
+      const shows = await loadShows();
+
       // Fetch status for all shows in parallel
-      const results = await Promise.all(SHOWS.map(fetchBlastStatus));
+      const results = await Promise.all(shows.map(fetchBlastStatus));
 
       // Filter to only archived episodes with playable URLs
       const episodes = results.filter(r => r.state === 'archived' && r.url);
 
       // Build RSS XML
-      const rss = buildRSSFeed(episodes, url.origin);
+      const rss = buildRSSFeed(episodes, url.origin, shows);
 
       return new Response(rss, {
         status: 200,
@@ -74,13 +82,91 @@ export default {
   }
 };
 
-function buildRSSFeed(episodes, origin) {
+/**
+ * Load the show list from streams/blast-shows.csv (cached at the edge for an
+ * hour so feed requests don't hit the site every time). Falls back to the
+ * built-in FALLBACK_SHOWS if the fetch fails or yields no rows.
+ */
+async function loadShows() {
+  try {
+    const resp = await fetch(SHOWS_CSV_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const shows = parseShowsCSV(await resp.text())
+      .map(row => ({ handle: row.handle, name: row.name || row.handle }));
+    if (shows.length) return shows;
+    console.error('blast-shows.csv returned no rows; using fallback list');
+  } catch (err) {
+    console.error('Failed to load blast-shows.csv; using fallback list:', err && err.message);
+  }
+  return FALLBACK_SHOWS;
+}
+
+/**
+ * Parse blast-shows.csv into [{ handle, name, display_name }].
+ * Tolerates CRLF line endings, a BOM, blank lines and a trailing newline.
+ * Columns are located by header name.
+ */
+function parseShowsCSV(text) {
+  const lines = String(text || '').replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const header = splitCSVLine(lines[0] || '').map(h => h.toLowerCase());
+  const hi = header.indexOf('handle');
+  const ni = header.indexOf('name');
+  const di = header.indexOf('display_name');
+  if (hi === -1) return [];
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const fields = splitCSVLine(line);
+    const handle = fields[hi];
+    if (!handle) continue;
+    rows.push({
+      handle,
+      name: (ni === -1 ? '' : fields[ni]) || '',
+      display_name: (di === -1 ? '' : fields[di]) || '',
+    });
+  }
+  return rows;
+}
+
+/** Split one CSV line into fields. Supports quoted fields with "" escapes. */
+function splitCSVLine(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        current += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ',') {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
+function buildRSSFeed(episodes, origin, shows) {
   const now = new Date().toUTCString();
   const selfUrl = `${origin}/api/blast-podcast`;
 
   let items = '';
   for (const ep of episodes) {
-    const show = SHOWS.find(s => s.handle === ep.handle);
+    const show = shows.find(s => s.handle === ep.handle);
     const title = show ? show.name : ep.handle;
     const pubDate = ep.end ? new Date(ep.end * 1000).toUTCString() : now;
     const duration = ep.start && ep.end ? formatDuration(ep.end - ep.start) : '';
