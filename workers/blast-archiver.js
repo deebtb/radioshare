@@ -23,7 +23,7 @@
 //   shows(
 //     broadcast_id TEXT PRIMARY KEY,  -- Blast broadcast id (dedupe key)
 //     handle       TEXT NOT NULL,     -- Blast profile handle
-//     show_name    TEXT,              -- display name from SHOWS map
+//     show_name    TEXT,              -- plain `name` from blast-shows.csv
 //     start_ts     INTEGER,           -- broadcast start (unix seconds)
 //     end_ts       INTEGER,           -- broadcast end (unix seconds)
 //     duration     INTEGER,           -- seconds (payload duration, else end - start)
@@ -38,7 +38,14 @@
 //   GET /            -> JSON array of all captured shows, newest start first.
 //   scheduled (cron) -> poll all handles and upsert archived shows.
 
-const SHOWS = [
+// Source of truth for the show list: streams/blast-shows.csv on the site
+// (columns handle,name,display_name). This worker uses the plain `name` column
+// for show_name.
+const SHOWS_CSV_URL = 'https://deeradio.uk/streams/blast-shows.csv';
+
+// Built-in fallback, used ONLY if the CSV fetch fails or returns no rows.
+// It may be out of date; edit streams/blast-shows.csv instead of this list.
+const FALLBACK_SHOWS = [
   { handle: 'deepspaceradio', name: 'Deep Space Radio' },
   { handle: 'getrocked', name: 'Get Rocked' },
   { handle: 'richpasternack', name: 'Rich Pasternack' },
@@ -79,10 +86,11 @@ export default {
 
   async scheduled(event, env, ctx) {
     const now = Math.floor(Date.now() / 1000);
+    const shows = await loadShows();
 
     // Poll every handle in parallel; wrap each task so one failure never aborts
     // the whole batch.
-    await Promise.all(SHOWS.map(async (show) => {
+    await Promise.all(shows.map(async (show) => {
       try {
         const record = await fetchArchivedShow(show);
         if (record) {
@@ -95,6 +103,87 @@ export default {
     }));
   },
 };
+
+/**
+ * Load the show list from streams/blast-shows.csv (cached at the edge for an
+ * hour). Falls back to the built-in FALLBACK_SHOWS if the fetch fails or yields
+ * no rows.
+ */
+async function loadShows() {
+  try {
+    const resp = await fetch(SHOWS_CSV_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const shows = parseShowsCSV(await resp.text())
+      .map(row => ({ handle: row.handle, name: row.name || row.handle }));
+    if (shows.length) return shows;
+    console.error('blast-shows.csv returned no rows; using fallback list');
+  } catch (err) {
+    console.error('Failed to load blast-shows.csv; using fallback list:', err && err.message);
+  }
+  return FALLBACK_SHOWS;
+}
+
+/**
+ * Parse blast-shows.csv into [{ handle, name, display_name }].
+ * Tolerates CRLF line endings, a BOM, blank lines and a trailing newline.
+ * Columns are located by header name.
+ *
+ * NOTE: self-contained duplicate of the parser in blast-podcast.js so each file
+ * deploys as a standalone Cloudflare Worker. Keep the copies in sync.
+ */
+function parseShowsCSV(text) {
+  const lines = String(text || '').replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const header = splitCSVLine(lines[0] || '').map(h => h.toLowerCase());
+  const hi = header.indexOf('handle');
+  const ni = header.indexOf('name');
+  const di = header.indexOf('display_name');
+  if (hi === -1) return [];
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const fields = splitCSVLine(line);
+    const handle = fields[hi];
+    if (!handle) continue;
+    rows.push({
+      handle,
+      name: (ni === -1 ? '' : fields[ni]) || '',
+      display_name: (di === -1 ? '' : fields[di]) || '',
+    });
+  }
+  return rows;
+}
+
+/** Split one CSV line into fields. Supports quoted fields with "" escapes. */
+function splitCSVLine(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        current += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ',') {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
 
 /**
  * Fetch a Blast profile and return an archived-show record, or null if the most
